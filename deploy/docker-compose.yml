@@ -1,0 +1,33 @@
+version: '3.9'
+services:
+  niuma-swap:
+    image: ghcr.io/wyalei14-cell/niuma-swap:latest
+    container_name: niuma-swap
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+
+  caddy:
+    image: caddy:2.8
+    container_name: niuma-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - niuma-swap
+
+volumes:
+  caddy_data:
+  caddy_config:
