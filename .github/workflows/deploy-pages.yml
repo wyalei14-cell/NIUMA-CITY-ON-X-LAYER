@@ -32,13 +32,13 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
 
-      - name: Build web app
-        run: bun web build
+      - name: Build web app (production)
+        run: bun web build:production
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/web/dist
+          path: apps/web/build
 
   deploy:
     environment:
