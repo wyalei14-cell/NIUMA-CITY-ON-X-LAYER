@@ -30,7 +30,7 @@ jobs:
           bun-version: latest
 
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Build web app (production)
         run: bun web build:production
