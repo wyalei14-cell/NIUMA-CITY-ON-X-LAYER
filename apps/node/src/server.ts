@@ -3,7 +3,7 @@ import cors from "cors";
 import { WebSocketServer } from "ws";
 import { addEvent, currentWorld, events } from "./store.js";
 import { createProposalIssue, verifyGithubSignature } from "./github.js";
-import { getChainSyncStatus, syncChainEvents } from "./chain.js";
+import { getChainSyncStatus, syncChainEvents, publishWorldVersion } from "./chain.js";
 import { WorldEvent } from "@niuma/reducer";
 import fs from "node:fs";
 import path from "node:path";
@@ -231,12 +231,60 @@ app.post("/api/proposals/create-passed-issues", requireServiceAuth, async (_req,
   }
 });
 
-app.post("/api/world/publish", requireServiceAuth, (_req, res) => {
-  res.status(202).json({
-    ok: true,
-    note: "Wire this endpoint to WorldStateRegistry.submitWorldVersion with a funded publisher wallet.",
-    manifest: currentWorld().manifest
-  });
+app.post("/api/world/publish", requireServiceAuth, async (_req, res) => {
+  try {
+    const world = currentWorld();
+    const manifest = world.manifest;
+
+    // Prepare manifest URI (in production, this would be uploaded to IPFS or other storage)
+    // For now, use a local reference
+    const manifestURI = `world/manifests/v${manifest.version}.json`;
+
+    // Publish the world version to WorldStateRegistry contract
+    const result = await publishWorldVersion(
+      manifest.version,
+      manifest.stateRoot,
+      manifestURI
+    );
+
+    if (!result.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: result.error,
+        reason: result.reason,
+        note: "Ensure PUBLISHER_PRIVATE_KEY is set and wallet has sufficient OKB for gas"
+      });
+    }
+
+    // Add event to record the publishing
+    addEvent({
+      id: `world-published-${manifest.version}-${Date.now()}`,
+      source: "node",
+      type: "WorldVersionPublished",
+      payload: {
+        version: manifest.version,
+        stateRoot: manifest.stateRoot,
+        manifestURI,
+        txHash: result.txHash
+      }
+    });
+
+    broadcast("archive", { type: "WorldVersionPublished", version: manifest.version, txHash: result.txHash });
+
+    res.status(200).json({
+      ok: true,
+      version: manifest.version,
+      txHash: result.txHash,
+      manifestURI,
+      note: "World version successfully published to WorldStateRegistry contract on X Layer Testnet"
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      note: "Failed to publish world version"
+    });
+  }
 });
 
 const server = app.listen(port, () => {

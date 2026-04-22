@@ -66,7 +66,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/7",
     "title": "Make world version publishing real",
     "type": "protocol",
-    "status": "open",
+    "status": "completed",
     "proposalId": 1,
     "summary": "Wire /api/world/publish to submit WorldStateRegistry versions using a configured state publisher wallet.",
     "acceptance": [

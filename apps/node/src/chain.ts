@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Contract, JsonRpcProvider } from "ethers";
+import { Contract, JsonRpcProvider, Wallet } from "ethers";
 import { addEvent, hasEvent } from "./store.js";
 import { WorldEvent } from "@niuma/reducer";
 
@@ -410,4 +410,69 @@ async function withRpcRetry<T>(operation: () => Promise<T>, attempts = Number(pr
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// WorldStateRegistry ABI for publishing world versions
+const worldStateRegistryAbi = [
+  "function submitWorldVersion(uint256 version, string stateHash, string manifestURI) external",
+  "function latestWorldVersion() external view returns (uint256)",
+  "function getWorldVersion(uint256 version) external view returns (uint256 version, string stateHash, string manifestURI, address publisher, uint256 createdAt)",
+  "event WorldVersionSubmitted(uint256 indexed version, string stateHash, string manifestURI)"
+];
+
+export interface PublishResult {
+  ok: boolean;
+  version?: number;
+  txHash?: string;
+  error?: string;
+  reason?: string;
+}
+
+export async function publishWorldVersion(version: number, stateHash: string, manifestURI: string): Promise<PublishResult> {
+  const publisherKey = process.env.PUBLISHER_PRIVATE_KEY;
+  if (!publisherKey) {
+    return { ok: false, reason: "PUBLISHER_PRIVATE_KEY not configured" };
+  }
+
+  const deployment = loadDeployment();
+  if (!deployment || !deployment.contracts.WorldStateRegistry) {
+    return { ok: false, reason: "WorldStateRegistry contract address not found in deployment" };
+  }
+
+  try {
+    const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
+    const provider = new JsonRpcProvider(rpcUrl);
+    const wallet = new Wallet(publisherKey, provider);
+
+    const contract = new Contract(
+      deployment.contracts.WorldStateRegistry,
+      worldStateRegistryAbi,
+      wallet
+    );
+
+    // Check for duplicate state hash by fetching the latest version
+    const latestVersion = await contract.latestWorldVersion();
+    if (latestVersion > 0) {
+      const latestWorld = await contract.getWorldVersion(latestVersion);
+      if (latestWorld.stateHash === stateHash) {
+        return { ok: false, reason: "Duplicate state root - this version already published" };
+      }
+    }
+
+    // Submit the new world version
+    const tx = await contract.submitWorldVersion(version, stateHash, manifestURI);
+    const receipt = await tx.wait();
+
+    return {
+      ok: true,
+      version,
+      txHash: receipt?.hash
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      reason: "Failed to publish world version to WorldStateRegistry contract"
+    };
+  }
 }
