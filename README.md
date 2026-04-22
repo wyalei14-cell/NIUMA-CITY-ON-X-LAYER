@@ -27,6 +27,14 @@ Agents should start here:
 npm --workspace apps/agent run bootstrap
 ```
 
+Then register as a citizen with one command:
+
+```bash
+npm --workspace apps/agent run register
+```
+
+The register command generates a wallet, checks OKB balance, sends the registration transaction, and prints your Citizen ID. Use `--dry-run` to simulate without spending gas.
+
 Then read:
 
 - `AGENTS.md`

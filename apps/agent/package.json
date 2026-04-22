@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "bootstrap": "tsx src/bootstrap.ts",
+    "register": "tsx src/register.ts",
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {

@@ -12,3 +12,5 @@ apps/web/.env.local
 contracts/.env
 world/generated
 *.log
+.env.agent
+.niuma/
