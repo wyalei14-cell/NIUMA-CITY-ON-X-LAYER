@@ -21,7 +21,9 @@ describe("Niuma City Alpha Protocol", function () {
     const courseRegistry = await CourseRegistry.deploy(await citizenRegistry.getAddress(), owner.address);
     const CredentialRegistry = await ethers.getContractFactory("CredentialRegistry");
     const credentialRegistry = await CredentialRegistry.deploy(await citizenRegistry.getAddress(), await courseRegistry.getAddress(), owner.address);
-    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry };
+    const ReputationSystem = await ethers.getContractFactory("ReputationSystem");
+    const reputationSystem = await ReputationSystem.deploy(await citizenRegistry.getAddress(), owner.address);
+    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry, reputationSystem };
   }
 
   it("registers citizens as non-transferable identities", async function () {
@@ -155,5 +157,47 @@ describe("Niuma City Alpha Protocol", function () {
     const citizenCreds = await credentialRegistry.getCredentialsByCitizen(alice.address);
     expect(citizenCreds.length).to.equal(1);
     expect(citizenCreds[0]).to.equal(1);
+  });
+
+  it("awards reputation points from governance, academy, and company actions", async function () {
+    const { owner, alice, bob, citizenRegistry, reputationSystem } = await deploy();
+    await citizenRegistry.connect(alice).registerCitizen(alice.address, "ipfs://alice");
+    await citizenRegistry.connect(bob).registerCitizen(bob.address, "ipfs://bob");
+
+    // Owner can award governance points directly
+    await reputationSystem.awardVote(alice.address);
+    await reputationSystem.awardProposalCreated(alice.address);
+    const rep1 = await reputationSystem.getReputation(alice.address);
+    expect(rep1.governancePoints).to.equal(35n); // 10 + 25
+    expect(rep1.totalPoints).to.equal(35n);
+
+    // Set sources and test authorized calls
+    await reputationSystem.setGovernanceSource(owner.address);
+    await reputationSystem.setAcademySource(owner.address);
+    await reputationSystem.setCompanySource(owner.address);
+
+    // Academy points
+    await reputationSystem.awardCourseCompleted(alice.address);
+    await reputationSystem.awardCredentialEarned(alice.address);
+    const rep2 = await reputationSystem.getReputation(alice.address);
+    expect(rep2.academyPoints).to.equal(70n); // 30 + 40
+    expect(rep2.totalPoints).to.equal(105n); // 35 + 70
+
+    // Company points
+    await reputationSystem.awardCompanyFounded(bob.address);
+    await reputationSystem.awardCompanyJoined(bob.address);
+    const rep3 = await reputationSystem.getReputation(bob.address);
+    expect(rep3.companyPoints).to.equal(30n); // 20 + 10
+    expect(rep3.totalPoints).to.equal(30n);
+
+    // Proposal passed bonus
+    await reputationSystem.awardProposalPassed(alice.address);
+    const rep4 = await reputationSystem.getReputation(alice.address);
+    expect(rep4.governancePoints).to.equal(85n); // 35 + 50
+    expect(rep4.totalPoints).to.equal(155n); // 105 + 50
+
+    // Non-source can't award
+    await expect(reputationSystem.connect(bob).awardVote(alice.address))
+      .to.be.revertedWithCustomError(reputationSystem, "NotAuthorizedSource");
   });
 });

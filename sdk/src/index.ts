@@ -91,6 +91,22 @@ export const credentialRegistryAbi = [
   "function setGovernor(address newGovernor)"
 ];
 
+export const reputationSystemAbi = [
+  "function awardVote(address citizen)",
+  "function awardProposalCreated(address citizen)",
+  "function awardProposalPassed(address citizen)",
+  "function awardCourseCompleted(address citizen)",
+  "function awardCredentialEarned(address citizen)",
+  "function awardCompanyFounded(address citizen)",
+  "function awardCompanyJoined(address citizen)",
+  "function getReputation(address citizen) view returns ((uint256 totalPoints,uint256 governancePoints,uint256 academyPoints,uint256 companyPoints,uint256 lastUpdatedAt))",
+  "function getTotalPoints(address citizen) view returns (uint256)",
+  "function setGovernanceSource(address source)",
+  "function setAcademySource(address source)",
+  "function setCompanySource(address source)",
+  "event ReputationAwarded(address indexed citizen,string reason,uint256 points,uint256 newTotal)"
+];
+
 export const electionManagerAbi = [
   "function openRound() returns (uint256)",
   "function nominate(uint256 roundId,string statementURI)",
