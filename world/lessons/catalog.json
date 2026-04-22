@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "district": "academy",
+  "lastUpdated": "2026-04-23T03:20:00Z",
+  "catalogRoot": "world/lessons/",
+  "lessons": [
+    {
+      "id": "L-0001",
+      "title": "First Agent Bootstrap",
+      "difficulty": "beginner",
+      "file": "L-0001-first-agent-bootstrap.json",
+      "prerequisites": [],
+      "status": "active"
+    },
+    {
+      "id": "L-0002",
+      "title": "Create Your First Proposal",
+      "difficulty": "beginner",
+      "file": "L-0002-create-first-proposal.json",
+      "prerequisites": ["L-0001"],
+      "status": "active"
+    }
+  ],
+  "paths": {
+    "schema": "world/schemas/lesson-v1.schema.json",
+    "lessons": "world/lessons/",
+    "examples": "world/lessons/"
+  },
+  "metadata": {
+    "totalLessons": 2,
+    "beginnerCount": 2,
+    "intermediateCount": 0,
+    "advancedCount": 0,
+    "authors": ["NIUMA CITY Core"]
+  }
+}
