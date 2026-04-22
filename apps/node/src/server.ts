@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { WebSocketServer } from "ws";
+import { ethers } from "ethers";
 import { addEvent, currentWorld, events } from "./store.js";
 import { createProposalIssue, verifyGithubSignature } from "./github.js";
 import { getChainSyncStatus, syncChainEvents } from "./chain.js";
@@ -250,12 +251,72 @@ app.post("/api/proposals/create-passed-issues", requireServiceAuth, async (_req,
   }
 });
 
-app.post("/api/world/publish", requireServiceAuth, (_req, res) => {
-  res.status(202).json({
-    ok: true,
-    note: "Wire this endpoint to WorldStateRegistry.submitWorldVersion with a funded publisher wallet.",
-    manifest: currentWorld().manifest
-  });
+app.post("/api/world/publish", requireServiceAuth, async (_req, res) => {
+  try {
+    const manifest = currentWorld().manifest;
+    const worldRegistryAddress = process.env.WORLD_STATE_REGISTRY;
+    const publisherKey = process.env.WORLD_PUBLISHER_KEY;
+    const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
+
+    if (!worldRegistryAddress) {
+      res.status(500).json({ ok: false, error: "WORLD_STATE_REGISTRY env not configured" });
+      return;
+    }
+    if (!publisherKey) {
+      res.status(500).json({ ok: false, error: "WORLD_PUBLISHER_KEY env not configured. Fund a wallet with OKB and set the private key." });
+      return;
+    }
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const signer = new ethers.Wallet(publisherKey, provider);
+    const registry = new ethers.Contract(worldRegistryAddress, [
+      "function latestWorldVersion() view returns (uint256)",
+      "function submitWorldVersion(uint256 version, string stateHash, string manifestURI)"
+    ], signer);
+
+    const latestOnchain = await registry.latestWorldVersion();
+    const nextVersion = Number(latestOnchain) + 1;
+
+    if (manifest.version !== nextVersion) {
+      res.status(409).json({
+        ok: false,
+        error: `Version mismatch: onchain expects ${nextVersion}, manifest has ${manifest.version}. Run /api/world/reduce first.`,
+        onchainVersion: Number(latestOnchain),
+        manifestVersion: manifest.version
+      });
+      return;
+    }
+
+    // Write manifest to file
+    const manifestDir = path.resolve(process.cwd(), "world", "generated");
+    if (!fs.existsSync(manifestDir)) fs.mkdirSync(manifestDir, { recursive: true });
+    const manifestPath = path.join(manifestDir, `manifest-${manifest.version}.json`);
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+    const manifestURI = `local://world/generated/manifest-${manifest.version}.json`;
+
+    console.log(`Publishing world version ${nextVersion} with stateRoot ${manifest.stateRoot}...`);
+    const tx = await registry.submitWorldVersion(nextVersion, manifest.stateRoot, manifestURI, { gasLimit: 200000 });
+    const receipt = await tx.wait();
+
+    if (receipt.status === 0) {
+      res.status(500).json({ ok: false, error: "Transaction reverted on chain", txHash: tx.hash });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      version: nextVersion,
+      stateRoot: manifest.stateRoot,
+      manifestURI,
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      note: "World version published successfully"
+    });
+  } catch (err: any) {
+    console.error("World publish error:", err);
+    res.status(500).json({ ok: false, error: err.message || "Unknown error" });
+  }
 });
 
 const server = app.listen(port, () => {
