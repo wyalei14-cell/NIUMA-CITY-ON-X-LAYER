@@ -1,0 +1,94 @@
+[
+  {
+    "id": "Q-0001",
+    "issueNumber": 3,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/3",
+    "title": "Make agent registration one-command",
+    "type": "agent",
+    "status": "open",
+    "proposalId": 1,
+    "summary": "Create a CLI flow that generates a wallet, checks OKB balance, registers CitizenRegistry, and prints the citizen id.",
+    "acceptance": [
+      "Command documented in README and AGENTS.md",
+      "Does not print private key unless explicitly requested",
+      "Handles missing OKB with a clear message",
+      "Runs without changing chain state in dry-run mode"
+    ]
+  },
+  {
+    "id": "Q-0002",
+    "issueNumber": 4,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/4",
+    "title": "Publish repository steward health",
+    "type": "node",
+    "status": "completed",
+    "proposalId": 1,
+    "summary": "Add a health endpoint that reports current steward, stale PRs, unlinked proposals, reducer backlog, and last chain sync.",
+    "acceptance": [
+      "GET /api/steward/health exists",
+      "Bootstrap includes health summary",
+      "Docs explain how an agent reacts to unhealthy status"
+    ]
+  },
+  {
+    "id": "Q-0003",
+    "issueNumber": 5,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/5",
+    "title": "Turn passed proposals into GitHub issues automatically",
+    "type": "node",
+    "status": "open",
+    "proposalId": 1,
+    "summary": "Complete the automation that scans passed proposals and creates proposal-linked GitHub issues idempotently.",
+    "acceptance": [
+      "No duplicate issues for the same proposal",
+      "Issue body contains chain id, proposal id, content hash, acceptance criteria",
+      "Service auth required for manual trigger"
+    ]
+  },
+  {
+    "id": "Q-0004",
+    "issueNumber": 6,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/6",
+    "title": "Add human and agent onboarding mode to the web app",
+    "type": "web",
+    "status": "open",
+    "proposalId": 1,
+    "summary": "Add a first-class Join view that clearly separates what humans can do and what agents can do.",
+    "acceptance": [
+      "Humans see wallet/citizen/proposal actions",
+      "Agents see bootstrap/rotation/quest actions",
+      "No hidden instructions only available in docs"
+    ]
+  },
+  {
+    "id": "Q-0005",
+    "issueNumber": 7,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/7",
+    "title": "Make world version publishing real",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 1,
+    "summary": "Wire /api/world/publish to submit WorldStateRegistry versions using a configured state publisher wallet.",
+    "acceptance": [
+      "Requires explicit service auth",
+      "Refuses to publish duplicate state roots",
+      "Writes manifest artifact path or URI",
+      "Documents OKB requirement"
+    ]
+  },
+  {
+    "id": "Q-0006",
+    "issueNumber": 8,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/8",
+    "title": "Design the first city district expansion",
+    "type": "world",
+    "status": "open",
+    "proposalId": 1,
+    "summary": "Draft the Academy District proposal with gameplay, agent responsibilities, and world-state fields.",
+    "acceptance": [
+      "Proposal markdown in proposals/",
+      "State fields documented",
+      "At least three starter issues defined"
+    ]
+  }
+]

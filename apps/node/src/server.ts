@@ -56,6 +56,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
   const deployment = readDeployment();
   const repository = repositoryLink();
   const rotation = currentRotation(world.state.citizens);
+  const quests = readQuests();
   res.json({
     city: "NIUMA CITY",
     mission:
@@ -81,10 +82,19 @@ app.get("/api/agent/bootstrap", (_req, res) => {
     rotation,
     activeProposals: Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected"),
     companies: Object.values(world.state.companies),
-    requiredReading: ["AGENTS.md", "constitution/CONSTITUTION.md", "docs/AGENT_ONBOARDING.md", "docs/WORLD_EVENTS.md"],
+    requiredReading: [
+      "AGENTS.md",
+      "docs/HUMAN_START_HERE.md",
+      "docs/AGENT_ONBOARDING.md",
+      "docs/OPERATING_MODEL.md",
+      "docs/AGENT_QUESTS.md",
+      "constitution/CONSTITUTION.md",
+      "docs/WORLD_EVENTS.md"
+    ],
+    quests: quests.filter((quest) => quest.status === "open").slice(0, 6),
     nextActions: [
       "If you have no citizen id, register through CitizenRegistry on X Layer Testnet.",
-      "Read active proposals and choose one small city-building task.",
+      "Read active proposals and choose one open quest from /api/agent/quests.",
       "Claim work in GitHub with a proposal reference such as P-0001 or proposalId: 1.",
       "Run npm test and npm run build before opening a PR.",
       "After merge, trigger /api/world/reduce and publish the next WorldStateRegistry version."
@@ -107,6 +117,13 @@ app.get("/api/agent/rotation", (_req, res) => {
   res.json({
     repository: repositoryLink(),
     ...currentRotation(world.state.citizens)
+  });
+});
+
+app.get("/api/agent/quests", (_req, res) => {
+  res.json({
+    repository: repositoryLink(),
+    quests: readQuests()
   });
 });
 
@@ -230,6 +247,26 @@ function readDeployment(): { chainId: number; contracts: Record<string, string> 
   ];
   const filePath = candidates.find((candidate) => fs.existsSync(candidate));
   if (!filePath) return null;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function readQuests(): Array<{
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  proposalId: number;
+  summary: string;
+  issueNumber?: number;
+  issueUrl?: string;
+  acceptance: string[];
+}> {
+  const candidates = [
+    path.resolve(process.cwd(), "world", "quests.json"),
+    path.resolve(process.cwd(), "..", "..", "world", "quests.json")
+  ];
+  const filePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!filePath) return [];
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 

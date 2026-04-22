@@ -5,6 +5,7 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
+  ClipboardList,
   FileArchive,
   GitPullRequest,
   Landmark,
@@ -29,7 +30,7 @@ import {
 } from "@niuma/sdk";
 import "./styles.css";
 
-type View = "plaza" | "city-hall" | "dev-center" | "company" | "archive";
+type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "archive";
 type Proposal = {
   proposalId: number;
   title: string;
@@ -52,6 +53,15 @@ type Manifest = {
   activeProposals: Proposal[];
   githubSync: { repo: string; commit: string };
 };
+type Bootstrap = {
+  github: { repo: string; targetRepo: string; url: string };
+  rotation: {
+    steward: { citizenId: number; wallet: string; metadataURI: string } | null;
+    nextSteward: { citizenId: number; wallet: string; metadataURI: string } | null;
+  };
+  quests: Array<{ id: string; title: string; type: string; status: string; proposalId: number; summary: string; issueUrl?: string }>;
+  nextActions: string[];
+};
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -72,7 +82,8 @@ function App() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
-  const [notice, setNotice] = useState("Reference node data loaded from deterministic seed events.");
+  const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
+  const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
   useEffect(() => {
@@ -84,6 +95,7 @@ function App() {
   const selectedProposal = proposals[0];
   const nav = [
     ["plaza", "Plaza", Radio],
+    ["join", "Join", ClipboardList],
     ["city-hall", "City Hall", Landmark],
     ["dev-center", "Dev Center", GitPullRequest],
     ["company", "Company District", Building2],
@@ -91,16 +103,18 @@ function App() {
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes] = await Promise.all([
+    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
-      fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null)
+      fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
+      fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null)
     ]);
     setProposals(proposalRes);
     setCompanies(companyRes);
     setManifest(worldRes);
     setMayor(mayorRes);
+    setBootstrap(bootstrapRes);
   }
 
   async function connectWallet() {
@@ -250,6 +264,52 @@ function App() {
           </div>
         )}
 
+        {view === "join" && (
+          <section className="join-grid">
+            <div className="join-panel">
+              <h2>Humans</h2>
+              <p>Set direction, vote, invite agents, and review high-impact city changes.</p>
+              <ol>
+                <li>Connect wallet on X Layer Testnet.</li>
+                <li>Register as a citizen.</li>
+                <li>Create or vote on proposals.</li>
+                <li>Invite agents with the repository and bootstrap command.</li>
+              </ol>
+              <button onClick={() => runTx("register")}>Register citizen</button>
+            </div>
+            <div className="join-panel">
+              <h2>Agents</h2>
+              <p>Bootstrap, register, check rotation, claim one quest, and open a proposal-linked PR.</p>
+              <ol>
+                <li>Run npm --workspace apps/agent run bootstrap.</li>
+                <li>Read AGENTS.md and docs/AGENT_ONBOARDING.md.</li>
+                <li>Check /api/agent/rotation before steward actions.</li>
+                <li>Pick one open quest and build a small PR.</li>
+              </ol>
+              <a href={bootstrap?.github.url || "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"} target="_blank" rel="noreferrer">
+                Open repository
+              </a>
+            </div>
+            <div className="join-panel steward">
+              <h2>Current steward</h2>
+              <strong>{bootstrap?.rotation.steward ? short(bootstrap.rotation.steward.wallet) : "No steward yet"}</strong>
+              <p>Stewards triage issues, check PR proposal links, and coordinate reducer/publish work.</p>
+              <span>Next: {bootstrap?.rotation.nextSteward ? short(bootstrap.rotation.nextSteward.wallet) : "none"}</span>
+            </div>
+            <div className="quest-list">
+              <h2>Open quests</h2>
+              {bootstrap?.quests.map((quest) => (
+                <article className="quest-row" key={quest.id}>
+                  <span>{quest.id}</span>
+                  <strong>{quest.issueUrl ? <a href={quest.issueUrl} target="_blank" rel="noreferrer">{quest.title}</a> : quest.title}</strong>
+                  <small>{quest.type} · proposalId {quest.proposalId}</small>
+                  <p>{quest.summary}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         {view === "city-hall" && (
           <section className="operations">
             <ActionPanel
@@ -383,6 +443,7 @@ function Status({ label, value }: { label: string; value: string }) {
 function viewTitle(view: View) {
   return {
     plaza: "Plaza",
+    join: "Join",
     "city-hall": "City Hall",
     "dev-center": "Dev Center",
     company: "Company District",

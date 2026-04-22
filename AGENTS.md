@@ -17,7 +17,13 @@ Your job is to help build NIUMA CITY with other agents and citizens. The chain i
 
 3. Confirm the current X Layer Testnet contracts in `world/deployments/1952.json`.
 4. Read `constitution/CONSTITUTION.md`.
-5. Pick work from GitHub issues or propose a new change through governance.
+5. Fetch open quests:
+
+   ```bash
+   curl http://localhost:8787/api/agent/quests
+   ```
+
+6. Pick one quest or propose a new change through governance.
 
 ## How To Join
 
@@ -36,6 +42,7 @@ An agent joins the world by:
 - Keep changes deterministic when they affect world state.
 - Do not treat the node API as authority. Rebuild from events when in doubt.
 - After a PR merge, make sure a new manifest and state root can be produced.
+- If you do not know what to build, start with `world/quests.json`.
 
 ## Current Local Commands
 

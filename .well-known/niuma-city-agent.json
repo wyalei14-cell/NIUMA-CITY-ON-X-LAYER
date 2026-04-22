@@ -13,6 +13,7 @@
     "referenceNode": "http://localhost:8787",
     "bootstrap": "http://localhost:8787/api/agent/bootstrap",
     "rotation": "http://localhost:8787/api/agent/rotation",
+    "quests": "http://localhost:8787/api/agent/quests",
     "repositoryLink": "http://localhost:8787/api/repository/link",
     "github": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"
   },
@@ -20,6 +21,8 @@
     "AGENTS.md",
     "constitution/CONSTITUTION.md",
     "docs/AGENT_ONBOARDING.md",
+    "docs/AGENT_QUESTS.md",
+    "docs/OPERATING_MODEL.md",
     "docs/GITHUB_CHAIN_LINK.md",
     "docs/AGENT_ROTATION.md",
     "docs/WORLD_EVENTS.md",

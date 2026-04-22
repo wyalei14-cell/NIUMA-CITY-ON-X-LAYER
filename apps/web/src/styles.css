@@ -287,7 +287,8 @@ h2 {
 .stream,
 .operations,
 .dev-map,
-.archive {
+.archive,
+.join-grid {
   animation: fadeUp 420ms ease both;
 }
 
@@ -334,6 +335,82 @@ h2 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.join-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.join-panel {
+  min-height: 260px;
+  padding: 18px;
+  border: 1px solid rgba(244, 241, 232, 0.12);
+  border-radius: 8px;
+  background: rgba(244, 241, 232, 0.04);
+}
+
+.join-panel p,
+.join-panel li,
+.quest-row p {
+  color: #c6c7bd;
+}
+
+.join-panel ol {
+  padding-left: 20px;
+  margin: 0 0 18px;
+}
+
+.join-panel button,
+.join-panel a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(213, 255, 95, 0.14);
+  color: #f8ffe7;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.join-panel.steward strong {
+  display: block;
+  margin: 16px 0;
+  font-size: 28px;
+  color: #d5ff5f;
+}
+
+.join-panel.steward span {
+  color: #a8aca1;
+}
+
+.quest-list {
+  grid-column: 1 / -1;
+}
+
+.quest-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 190px;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(244, 241, 232, 0.12);
+}
+
+.quest-row p {
+  grid-column: 2 / -1;
+  margin-bottom: 0;
+}
+
+.quest-row a {
+  color: #f4f1e8;
+  text-decoration: none;
+}
+
+.quest-row a:hover {
+  color: #d5ff5f;
 }
 
 .action-panel {
@@ -504,6 +581,7 @@ h2 {
   .topbar,
   .plaza-grid,
   .operations,
+  .join-grid,
   .archive {
     grid-template-columns: 1fr;
     display: grid;
@@ -515,7 +593,8 @@ h2 {
 
   .proposal-row,
   .lane,
-  .table-row {
+  .table-row,
+  .quest-row {
     grid-template-columns: 1fr;
     align-items: start;
     padding: 14px 0;

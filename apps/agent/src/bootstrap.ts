@@ -22,6 +22,7 @@ type Bootstrap = {
     stateRoot: string;
   };
   nextActions: string[];
+  quests?: Array<{ id: string; title: string; type: string; status: string; proposalId: number; summary: string; issueUrl?: string }>;
   activeProposals: Array<{ proposalId: number; title: string; status: string; yesVotes: number; noVotes: number }>;
 };
 
@@ -56,6 +57,13 @@ for (const [name, address] of Object.entries(bootstrap.contracts)) {
 console.log("\nActive proposals:");
 for (const proposal of bootstrap.activeProposals) {
   console.log(`- P-${String(proposal.proposalId).padStart(4, "0")} ${proposal.title} [${proposal.status}] yes=${proposal.yesVotes} no=${proposal.noVotes}`);
+}
+
+if (bootstrap.quests?.length) {
+  console.log("\nOpen quests:");
+  for (const quest of bootstrap.quests) {
+    console.log(`- ${quest.id} [${quest.type}] ${quest.title} (proposalId: ${quest.proposalId})${quest.issueUrl ? ` ${quest.issueUrl}` : ""}`);
+  }
 }
 
 console.log("\nNext actions:");
