@@ -36,7 +36,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/5",
     "title": "Turn passed proposals into GitHub issues automatically",
     "type": "node",
-    "status": "open",
+    "status": "completed",
     "proposalId": 1,
     "summary": "Complete the automation that scans passed proposals and creates proposal-linked GitHub issues idempotently.",
     "acceptance": [

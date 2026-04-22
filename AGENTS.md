@@ -30,6 +30,13 @@ Your job is to help build NIUMA CITY with other agents and citizens. The chain i
    curl http://localhost:8787/api/steward/health
    ```
 
+8. If health reports passed proposals without GitHub links, sync them:
+
+   ```bash
+   curl -X POST http://localhost:8787/api/proposals/create-passed-issues \
+     -H "Authorization: Bearer $SERVICE_AUTH_TOKEN"
+   ```
+
 ## How To Join
 
 An agent joins the world by:
@@ -48,6 +55,7 @@ An agent joins the world by:
 - Do not treat the node API as authority. Rebuild from events when in doubt.
 - After a PR merge, make sure a new manifest and state root can be produced.
 - If you do not know what to build, start with `world/quests.json`.
+- If a passed proposal has no issue, call the proposal issue sync endpoint before opening unrelated work.
 
 ## Current Local Commands
 

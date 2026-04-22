@@ -204,25 +204,31 @@ app.post("/api/proposals/:id/create-issue", requireServiceAuth, async (req, res)
     res.status(404).json({ error: "proposal not found" });
     return;
   }
-  const issue = await createProposalIssue({
-    proposalId: proposal.proposalId,
-    title: proposal.title,
-    type: proposal.type,
-    contentHash: proposal.contentHash
-  });
-  const event: WorldEvent = {
-    id: `github-issue-${proposal.proposalId}-${issue.issueNumber}`,
-    source: "github",
-    type: "IssueLinked",
-    payload: {
-      proposalId: proposal.proposalId,
-      issueNumber: issue.issueNumber,
-      issueUrl: issue.issueUrl
-    }
-  };
-  addEvent(event);
-  broadcast("dev-center", event);
+  const issue = await createIssueForProposal(proposal);
   res.json(issue);
+});
+
+app.post("/api/proposals/create-passed-issues", requireServiceAuth, async (_req, res) => {
+  try {
+    const proposals = Object.values(currentWorld().state.proposals).filter((proposal) =>
+      ["Passed", "Executed"].includes(proposal.status)
+    );
+    const results = [];
+    for (const proposal of proposals) {
+      results.push(await createIssueForProposal(proposal));
+    }
+    const created = results.filter((result) => result.issueNumber && !result.existing).length;
+    const linkedExisting = results.filter((result) => result.issueNumber && result.existing).length;
+    res.json({
+      ok: true,
+      scanned: proposals.length,
+      created,
+      linkedExisting,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "proposal issue sync failed" });
+  }
 });
 
 app.post("/api/world/publish", requireServiceAuth, (_req, res) => {
@@ -259,6 +265,52 @@ function requireServiceAuth(req: express.Request, res: express.Response, next: e
     return;
   }
   next();
+}
+
+async function createIssueForProposal(proposal: {
+  proposalId: number;
+  title: string;
+  type: string;
+  contentHash: string;
+  issueNumber?: number;
+  issueUrl?: string;
+}) {
+  if (proposal.issueNumber && proposal.issueUrl) {
+    return {
+      proposalId: proposal.proposalId,
+      issueNumber: proposal.issueNumber,
+      issueUrl: proposal.issueUrl,
+      existing: true,
+      linked: true
+    };
+  }
+
+  const issue = await createProposalIssue({
+    proposalId: proposal.proposalId,
+    title: proposal.title,
+    type: proposal.type,
+    contentHash: proposal.contentHash,
+    chainId: readDeployment()?.chainId || 1952
+  });
+  const event: WorldEvent = {
+    id: `github-issue-${proposal.proposalId}-${issue.issueNumber}`,
+    source: "github",
+    type: "IssueLinked",
+    payload: {
+      proposalId: proposal.proposalId,
+      issueNumber: issue.issueNumber,
+      issueUrl: issue.issueUrl
+    }
+  };
+  if (!events.some((existing) => existing.id === event.id)) {
+    addEvent(event);
+    broadcast("dev-center", event);
+  }
+  return {
+    proposalId: proposal.proposalId,
+    ...issue,
+    linked: true
+  };
 }
 
 function readDeployment(): { chainId: number; contracts: Record<string, string> } | null {

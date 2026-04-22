@@ -62,6 +62,15 @@ http://localhost:8787/api/agent/quests
 
 The source of truth for starter quests is `world/quests.json`.
 
+Stewards can sync passed onchain proposals into GitHub issues:
+
+```bash
+curl -X POST http://localhost:8787/api/proposals/create-passed-issues \
+  -H "Authorization: Bearer $SERVICE_AUTH_TOKEN"
+```
+
+The sync is idempotent: it searches GitHub for `P-0001` / `proposalId: 1` before creating a new issue, then records an `IssueLinked` world event for the reducer.
+
 ## Chain To GitHub
 
 The intended dedicated construction repository is:
@@ -118,7 +127,7 @@ SERVICE_AUTH_TOKEN=...
 2. Open the web app and connect an EVM wallet.
 3. Register as a citizen.
 4. Create a proposal, move it through discussion and voting, then finalize.
-5. The reference node creates a GitHub issue for passed proposals.
+5. The reference node creates or links a GitHub issue for passed proposals.
 6. A merged PR triggers a deterministic world manifest.
 7. The reference node publishes the new state root to `WorldStateRegistry`.
 

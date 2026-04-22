@@ -48,8 +48,17 @@ type ChainSyncStatus = {
 };
 
 let lastChainSync: ChainSyncStatus | null = null;
+let syncInFlight: Promise<ChainSyncStatus> | null = null;
 
 export async function syncChainEvents() {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = syncChainEventsOnce().finally(() => {
+    syncInFlight = null;
+  });
+  return syncInFlight;
+}
+
+async function syncChainEventsOnce() {
   const deployment = loadDeployment();
   if (!deployment) {
     lastChainSync = { ok: false, reason: "deployment not found", syncedAt: Math.floor(Date.now() / 1000) };
@@ -59,7 +68,7 @@ export async function syncChainEvents() {
   try {
     const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
     const provider = new JsonRpcProvider(rpcUrl);
-    const latest = await provider.getBlockNumber();
+    const latest = await withRpcRetry(() => provider.getBlockNumber());
     const fromBlock = Number(process.env.CHAIN_START_BLOCK || Math.max(0, latest - 1000));
 
     const contracts = [
@@ -76,7 +85,7 @@ export async function syncChainEvents() {
       const chunkSize = Number(process.env.CHAIN_LOG_CHUNK_SIZE || 95);
       for (let start = fromBlock; start <= latest; start += chunkSize) {
         const end = Math.min(latest, start + chunkSize - 1);
-        const logs = await contract.queryFilter("*", start, end);
+        const logs = await withRpcRetry(() => contract.queryFilter("*", start, end));
         for (const log of logs) {
           const mapped = item.mapper(log);
           if (mapped && !hasEvent(mapped.id)) {
@@ -299,4 +308,23 @@ function loadDeployment(): Deployment | null {
   const filePath = candidates.find((candidate) => fs.existsSync(candidate));
   if (!filePath) return null;
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as Deployment;
+}
+
+async function withRpcRetry<T>(operation: () => Promise<T>, attempts = Number(process.env.CHAIN_RPC_RETRY_ATTEMPTS || 3)): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await delay(Number(process.env.CHAIN_RPC_RETRY_DELAY_MS || 750) * attempt);
+      }
+    }
+  }
+  throw lastError;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
