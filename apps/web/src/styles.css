@@ -574,6 +574,48 @@ h2 {
   text-align: right;
 }
 
+/* Academy */
+.academy-section {
+  margin-top: 20px;
+}
+.academy-section h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(244,241,232,0.6);
+  margin-bottom: 8px;
+}
+.course-id, .cred-id {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: rgba(244,241,232,0.5);
+}
+.difficulty {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+.difficulty.d0 { background: #1a3a1a; color: #6fcf6f; }
+.difficulty.d1 { background: #3a3a1a; color: #cfcf6f; }
+.difficulty.d2 { background: #3a1a1a; color: #cf6f6f; }
+.course-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+.course-status.draft { background: rgba(244,241,232,0.1); color: rgba(244,241,232,0.5); }
+.course-status.active { background: #1a3a1a; color: #6fcf6f; }
+.course-status.deprecated { background: #3a1a1a; color: #cf6f6f; }
+.evidence {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.empty {
+  color: rgba(244,241,232,0.4);
+  font-style: italic;
+  padding: 12px 0;
+}
+
 @keyframes rise {
   from {
     transform: translateY(80px);
