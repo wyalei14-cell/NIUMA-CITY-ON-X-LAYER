@@ -44,6 +44,11 @@ const reputationAbi = [
   "event ReputationAwarded(address indexed citizen,string reason,uint256 points,uint256 newTotal)"
 ];
 
+const delegateAbi = [
+  "event Delegated(address indexed delegator,address indexed delegatee)",
+  "event Revoked(address indexed delegator,address indexed delegatee)"
+];
+
 const proposalTypes = ["Feature", "Governance", "District", "Company"];
 const proposalStatuses = ["Draft", "Discussion", "Voting", "Passed", "Rejected", "Executed"];
 
@@ -93,7 +98,8 @@ async function syncChainEventsOnce() {
       { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent },
       { name: "CourseRegistry", address: deployment.contracts.CourseRegistry, abi: courseAbi, mapper: mapCourseEvent },
       { name: "CredentialRegistry", address: deployment.contracts.CredentialRegistry, abi: credentialAbi, mapper: mapCredentialEvent },
-      { name: "ReputationSystem", address: deployment.contracts.ReputationSystem, abi: reputationAbi, mapper: mapReputationEvent }
+      { name: "ReputationSystem", address: deployment.contracts.ReputationSystem, abi: reputationAbi, mapper: mapReputationEvent },
+      { name: "CitizenDelegate", address: deployment.contracts.CitizenDelegate, abi: delegateAbi, mapper: mapDelegateEvent }
     ];
 
     let added = 0;
@@ -386,6 +392,31 @@ function mapReputationEvent(log: any): WorldEvent | undefined {
   };
 }
 
+function mapDelegateEvent(log: any): WorldEvent | undefined {
+  const event = log.fragment?.name;
+  if (event === "Delegated") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "Delegated",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: { delegator: log.args.delegator, delegatee: log.args.delegatee }
+    };
+  }
+  if (event === "Revoked") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "Revoked",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: { delegator: log.args.delegator, delegatee: log.args.delegatee }
+    };
+  }
+  return undefined;
+}
+
 function chainEventId(log: any) {
   return `chain-${log.blockNumber}-${log.transactionIndex}-${log.index}-${log.transactionHash}`;
 }
@@ -401,7 +432,8 @@ function loadDeployment(): Deployment | null {
           CompanyRegistry: process.env.COMPANY_REGISTRY || "",
           CourseRegistry: process.env.COURSE_REGISTRY || "",
           CredentialRegistry: process.env.CREDENTIAL_REGISTRY || "",
-          ReputationSystem: process.env.REPUTATION_SYSTEM || ""
+          ReputationSystem: process.env.REPUTATION_SYSTEM || "",
+          CitizenDelegate: process.env.CITIZEN_DELEGATE || ""
         }
       }
     : null;

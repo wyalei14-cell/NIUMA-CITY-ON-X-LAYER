@@ -200,4 +200,60 @@ describe("Niuma City Alpha Protocol", function () {
     await expect(reputationSystem.connect(bob).awardVote(alice.address))
       .to.be.revertedWithCustomError(reputationSystem, "NotAuthorizedSource");
   });
+
+  it("allows citizens to delegate and revoke voting power", async function () {
+    const { owner, alice, bob, citizenRegistry } = await deploy();
+    const CitizenDelegate = await ethers.getContractFactory("CitizenDelegate");
+    const citizenDelegate = await CitizenDelegate.deploy(await citizenRegistry.getAddress(), owner.address);
+    await citizenRegistry.connect(alice).registerCitizen(alice.address, "ipfs://alice");
+    await citizenRegistry.connect(bob).registerCitizen(bob.address, "ipfs://bob");
+
+    // Alice delegates to Bob
+    await expect(citizenDelegate.connect(alice).delegate(bob.address))
+      .to.emit(citizenDelegate, "Delegated")
+      .withArgs(alice.address, bob.address);
+    expect(await citizenDelegate.delegation(alice.address)).to.equal(bob.address);
+    expect(await citizenDelegate.hasDelegated(alice.address)).to.equal(true);
+
+    // Bob's voting power is now 2 (himself + Alice)
+    expect(await citizenDelegate.getVotingPower(bob.address)).to.equal(2);
+    expect(await citizenDelegate.getVotingPower(alice.address)).to.equal(1);
+
+    // Alice's delegators list under Bob
+    const delegators = await citizenDelegate.getDelegators(bob.address);
+    expect(delegators.length).to.equal(1);
+    expect(delegators[0]).to.equal(alice.address);
+
+    // Can't delegate to self (SelfDelegation check runs before onlyCitizen for delegate param)
+    await expect(citizenDelegate.connect(alice).delegate(alice.address))
+      .to.be.revertedWithCustomError(citizenDelegate, "SelfDelegation");
+
+    // Can't delegate twice
+    await expect(citizenDelegate.connect(alice).delegate(bob.address))
+      .to.be.revertedWithCustomError(citizenDelegate, "AlreadyDelegated");
+
+    // Non-citizen can't delegate to citizen
+    const signers = await ethers.getSigners();
+    const carol = signers[3]; // signers[2] is bob from deploy
+    const dave = signers[4];
+    await expect(citizenDelegate.connect(carol).delegate(bob.address))
+      .to.be.revertedWithCustomError(citizenDelegate, "NotCitizen");
+
+    // Citizen can't delegate to non-citizen
+    await citizenRegistry.connect(carol).registerCitizen(carol.address, "ipfs://carol");
+    await expect(citizenDelegate.connect(carol).delegate(dave.address))
+      .to.be.revertedWithCustomError(citizenDelegate, "NotCitizen");
+
+    // Revoke delegation
+    await expect(citizenDelegate.connect(alice).revokeDelegation())
+      .to.emit(citizenDelegate, "Revoked")
+      .withArgs(alice.address, bob.address);
+    expect(await citizenDelegate.delegation(alice.address)).to.equal(ethers.ZeroAddress);
+    expect(await citizenDelegate.hasDelegated(alice.address)).to.equal(false);
+    expect(await citizenDelegate.getVotingPower(bob.address)).to.equal(1);
+
+    // Can't revoke if not delegated
+    await expect(citizenDelegate.connect(alice).revokeDelegation())
+      .to.be.revertedWithCustomError(citizenDelegate, "NotDelegated");
+  });
 });
