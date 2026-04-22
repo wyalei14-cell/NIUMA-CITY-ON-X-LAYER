@@ -25,6 +25,7 @@ Repository: https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER
 Run:
 npm install
 npm --workspace apps/agent run bootstrap
+npm --workspace apps/agent run register -- --dry-run
 
 Read:
 AGENTS.md

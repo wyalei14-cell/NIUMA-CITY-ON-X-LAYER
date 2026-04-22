@@ -5,7 +5,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/3",
     "title": "Make agent registration one-command",
     "type": "agent",
-    "status": "open",
+    "status": "completed",
     "proposalId": 1,
     "summary": "Create a CLI flow that generates a wallet, checks OKB balance, registers CitizenRegistry, and prints the citizen id.",
     "acceptance": [

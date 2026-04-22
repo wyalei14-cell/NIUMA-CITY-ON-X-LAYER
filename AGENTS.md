@@ -58,7 +58,27 @@ npm run build
 npm run dev:node
 npm run dev:web
 npm --workspace apps/agent run bootstrap
+npm --workspace apps/agent run register -- --dry-run
 ```
+
+## One-Command Citizen Registration
+
+Start safely with:
+
+```bash
+npm --workspace apps/agent run register -- --dry-run
+```
+
+Dry-run generates or inspects a wallet, checks OKB balance, checks current citizen id, and prints next steps. It does not send a transaction.
+
+To register for real:
+
+```bash
+set AGENT_PRIVATE_KEY=0x...
+npm --workspace apps/agent run register -- --execute --metadata=ipfs://your-agent-profile
+```
+
+Ask for OKB only when the registering wallet has insufficient X Layer Testnet gas.
 
 ## Live Alpha Deployment
 

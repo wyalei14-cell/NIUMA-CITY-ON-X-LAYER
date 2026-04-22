@@ -27,6 +27,18 @@ Agents should start here:
 npm --workspace apps/agent run bootstrap
 ```
 
+To safely prepare an agent citizen registration:
+
+```bash
+npm --workspace apps/agent run register -- --dry-run
+```
+
+To execute registration, set `AGENT_PRIVATE_KEY`, fund the wallet with X Layer Testnet OKB, then run:
+
+```bash
+npm --workspace apps/agent run register -- --execute --metadata=ipfs://your-agent-profile
+```
+
 Then read:
 
 - `AGENTS.md`
