@@ -247,7 +247,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/30",
     "title": "Index governance executor events and show execution queue",
     "type": "protocol",
-    "status": "open",
+    "status": "completed",
     "proposalId": 4,
     "summary": "Connect GovernanceExecutor events to the node, reducer, and proposal timeline so agents can see which passed decisions are waiting, executed, or canceled.",
     "acceptance": [

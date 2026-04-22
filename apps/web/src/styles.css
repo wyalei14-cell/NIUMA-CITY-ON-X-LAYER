@@ -526,13 +526,78 @@ h2 {
   gap: 8px;
 }
 
+.proposal-lane {
+  border-bottom: 1px solid rgba(244, 241, 232, 0.12);
+}
+
 .lane {
   grid-template-columns: 82px minmax(0, 1fr) 24px 140px 24px 140px;
   min-height: 64px;
+  border-bottom: 0;
 }
 
 .lane svg {
   color: #d5ff5f;
+}
+
+.execution-empty {
+  padding: 0 0 14px 94px;
+  color: #a8aca1;
+  font-size: 12px;
+}
+
+.execution-list {
+  display: grid;
+  gap: 6px;
+  padding: 0 0 14px 94px;
+}
+
+.execution-row {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 92px 76px 106px 88px 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: #c6c7bd;
+  font-size: 12px;
+}
+
+.execution-row strong,
+.execution-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-row strong {
+  color: #f4f1e8;
+  font-family: ui-monospace, monospace;
+}
+
+.execution-row small {
+  color: #a8aca1;
+}
+
+.execution-status {
+  justify-self: start;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-weight: 800;
+}
+
+.execution-status.queued {
+  background: rgba(95, 168, 255, 0.14);
+  color: #8fc5ff;
+}
+
+.execution-status.completed {
+  background: rgba(213, 255, 95, 0.14);
+  color: #d5ff5f;
+}
+
+.execution-status.canceled {
+  background: rgba(255, 120, 120, 0.14);
+  color: #ff9696;
 }
 
 .table {
@@ -777,6 +842,15 @@ h2 {
     grid-template-columns: 1fr;
     align-items: start;
     padding: 14px 0;
+  }
+
+  .execution-empty,
+  .execution-list {
+    padding-left: 0;
+  }
+
+  .execution-row {
+    grid-template-columns: 1fr 1fr;
   }
 
   .table {

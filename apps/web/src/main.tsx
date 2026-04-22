@@ -46,6 +46,18 @@ type Proposal = {
   issueNumber?: number;
   issueUrl?: string;
   linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>;
+  executionQueue?: GovernanceExecution[];
+};
+type GovernanceExecution = {
+  executionId: number;
+  proposalId: number;
+  target: string;
+  value: string;
+  data: string;
+  metadataURI: string;
+  earliestExecuteAt: number;
+  status: "Queued" | "Completed" | "Canceled";
+  result?: string;
 };
 type Company = { companyId: number; name: string; owner: string; metadataURI: string; members: string[] };
 type Manifest = {
@@ -402,14 +414,17 @@ function App() {
         {view === "dev-center" && (
           <section className="dev-map">
             {proposals.map((proposal) => (
-              <div className="lane" key={proposal.proposalId}>
-                <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
-                <strong>{proposal.title}</strong>
-                <ChevronRight />
-                <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
-                <ChevronRight />
-                <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
-              </div>
+              <article className="proposal-lane" key={proposal.proposalId}>
+                <div className="lane">
+                  <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
+                  <strong>{proposal.title}</strong>
+                  <ChevronRight />
+                  <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
+                  <ChevronRight />
+                  <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
+                </div>
+                <ExecutionQueue executions={proposal.executionQueue || []} />
+              </article>
             ))}
           </section>
         )}
@@ -539,6 +554,26 @@ function ProposalRow({ proposal }: { proposal: Proposal }) {
   );
 }
 
+function ExecutionQueue({ executions }: { executions: GovernanceExecution[] }) {
+  if (!executions.length) {
+    return <div className="execution-empty">No governance execution queued.</div>;
+  }
+  return (
+    <div className="execution-list">
+      {executions.map((execution) => (
+        <div className="execution-row" key={execution.executionId}>
+          <span className={`execution-status ${execution.status.toLowerCase()}`}>{execution.status}</span>
+          <strong>EX-{String(execution.executionId).padStart(4, "0")}</strong>
+          <span>{short(execution.target)}</span>
+          <span>{execution.value === "0" ? "0 OKB" : `${execution.value} wei`}</span>
+          <span>{formatUnix(execution.earliestExecuteAt)}</span>
+          <small title={execution.metadataURI}>{shortHash(execution.metadataURI)}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ActionPanel({ icon, title, meta, actions }: { icon: React.ReactNode; title: string; meta: string; actions: Array<[string, () => void]> }) {
   return (
     <div className="action-panel">
@@ -582,7 +617,14 @@ function short(value: string) {
 }
 
 function shortHash(value: string) {
+  if (!value) return "";
+  if (value.length <= 24) return value;
   return `${value.slice(0, 13)}...${value.slice(-10)}`;
+}
+
+function formatUnix(value: number) {
+  if (!value) return "No time";
+  return new Date(value * 1000).toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function assertAddress(address: string, name: string) {
