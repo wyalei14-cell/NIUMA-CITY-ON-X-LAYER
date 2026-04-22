@@ -107,6 +107,18 @@ export const reputationSystemAbi = [
   "event ReputationAwarded(address indexed citizen,string reason,uint256 points,uint256 newTotal)"
 ];
 
+export const citizenDelegateAbi = [
+  "function delegate(address delegatee)",
+  "function revokeDelegation()",
+  "function getVotingPower(address citizen) view returns (uint256)",
+  "function getDelegators(address delegatee) view returns (address[])",
+  "function hasDelegated(address citizen) view returns (bool)",
+  "function delegation(address delegator) view returns (address)",
+  "function delegatedCount(address delegatee) view returns (uint256)",
+  "event Delegated(address indexed delegator,address indexed delegatee)",
+  "event Revoked(address indexed delegator,address indexed delegatee)"
+];
+
 export const electionManagerAbi = [
   "function openRound() returns (uint256)",
   "function nominate(uint256 roundId,string statementURI)",

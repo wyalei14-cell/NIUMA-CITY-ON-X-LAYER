@@ -18,6 +18,8 @@ export type WorldEvent =
   | { id: string; source: "chain"; type: "CourseCompleted"; blockNumber: number; logIndex: number; payload: { courseId: number; citizen: string } }
   | { id: string; source: "chain"; type: "CredentialIssued"; blockNumber: number; logIndex: number; payload: { credentialId: number; citizen: string; courseId: number; evidenceHash: string } }
   | { id: string; source: "chain"; type: "ReputationAwarded"; blockNumber: number; logIndex: number; payload: { citizen: string; reason: string; points: number; newTotal: number } }
+  | { id: string; source: "chain"; type: "Delegated"; blockNumber: number; logIndex: number; payload: { delegator: string; delegatee: string } }
+  | { id: string; source: "chain"; type: "Revoked"; blockNumber: number; logIndex: number; payload: { delegator: string; delegatee: string } }
   | { id: string; source: "github"; type: "IssueLinked"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; issueNumber: number; issueUrl: string } }
   | { id: string; source: "github"; type: "PullRequestMerged"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; prNumber: number; mergeCommit: string; url: string } };
 
@@ -44,6 +46,7 @@ export interface WorldState {
     credentials: Record<string, { credentialId: number; citizen: string; courseId: number; evidenceHash: string; issuedAt: number }>;
   };
   reputation: Record<string, { citizen: string; totalPoints: number; governancePoints: number; academyPoints: number; companyPoints: number }>;
+  delegations: Record<string, { delegator: string; delegatee: string }>;
   archive: WorldEvent[];
 }
 
@@ -68,7 +71,7 @@ export interface WorldManifest {
 }
 
 export function reduceEvents(events: WorldEvent[]): WorldState {
-  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, reputation: {}, archive: [] };
+  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, reputation: {}, delegations: {}, archive: [] };
   for (const event of sortEvents(events)) {
     state.archive.push(event);
     switch (event.type) {
@@ -203,6 +206,15 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
         };
         break;
       }
+      case "Delegated":
+        state.delegations[event.payload.delegator.toLowerCase()] = {
+          delegator: event.payload.delegator,
+          delegatee: event.payload.delegatee
+        };
+        break;
+      case "Revoked":
+        delete state.delegations[event.payload.delegator.toLowerCase()];
+        break;
       case "IssueLinked": {
         const proposal = state.proposals[String(event.payload.proposalId)];
         if (proposal) {

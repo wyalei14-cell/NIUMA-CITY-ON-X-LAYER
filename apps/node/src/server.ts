@@ -56,6 +56,11 @@ app.get("/api/reputation", (_req, res) => {
   res.json({ leaderboard, total: leaderboard.length });
 });
 
+app.get("/api/delegations", (_req, res) => {
+  const world = currentWorld();
+  res.json({ delegations: Object.values(world.state.delegations) });
+});
+
 app.get("/api/world/versions", (_req, res) => {
   res.json([currentWorld().manifest]);
 });
