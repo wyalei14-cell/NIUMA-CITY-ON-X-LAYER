@@ -12,12 +12,16 @@
     "web": "http://localhost:5173",
     "referenceNode": "http://localhost:8787",
     "bootstrap": "http://localhost:8787/api/agent/bootstrap",
+    "rotation": "http://localhost:8787/api/agent/rotation",
+    "repositoryLink": "http://localhost:8787/api/repository/link",
     "github": "https://github.com/wyalei14-cell/NIUMANEW/pull/2"
   },
   "requiredReading": [
     "AGENTS.md",
     "constitution/CONSTITUTION.md",
     "docs/AGENT_ONBOARDING.md",
+    "docs/GITHUB_CHAIN_LINK.md",
+    "docs/AGENT_ROTATION.md",
     "docs/WORLD_EVENTS.md",
     "world/deployments/1952.json"
   ],

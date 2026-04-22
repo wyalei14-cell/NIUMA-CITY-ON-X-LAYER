@@ -54,6 +54,8 @@ app.get("/api/election/current", (_req, res) => {
 app.get("/api/agent/bootstrap", (_req, res) => {
   const world = currentWorld();
   const deployment = readDeployment();
+  const repository = repositoryLink();
+  const rotation = currentRotation(world.state.citizens);
   res.json({
     city: "NIUMA CITY",
     mission:
@@ -66,8 +68,9 @@ app.get("/api/agent/bootstrap", (_req, res) => {
     },
     contracts: deployment?.contracts || {},
     github: {
-      repo: process.env.GITHUB_REPO || "wyalei14-cell/NIUMANEW",
-      pullRequest: "https://github.com/wyalei14-cell/NIUMANEW/pull/2"
+      repo: repository.activeRepo,
+      targetRepo: repository.targetRepo,
+      pullRequest: repository.bootstrapPullRequest
     },
     world: {
       version: world.manifest.version,
@@ -75,6 +78,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
       manifest: "/api/world/latest"
     },
     mayor: world.state.mayor || null,
+    rotation,
     activeProposals: Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected"),
     companies: Object.values(world.state.companies),
     requiredReading: ["AGENTS.md", "constitution/CONSTITUTION.md", "docs/AGENT_ONBOARDING.md", "docs/WORLD_EVENTS.md"],
@@ -96,6 +100,18 @@ app.get("/api/agent/bootstrap", (_req, res) => {
       signature: "0x..."
     }
   });
+});
+
+app.get("/api/agent/rotation", (_req, res) => {
+  const world = currentWorld();
+  res.json({
+    repository: repositoryLink(),
+    ...currentRotation(world.state.citizens)
+  });
+});
+
+app.get("/api/repository/link", (_req, res) => {
+  res.json(repositoryLink());
 });
 
 app.post("/api/chain/sync", requireServiceAuth, async (_req, res) => {
@@ -215,4 +231,44 @@ function readDeployment(): { chainId: number; contracts: Record<string, string> 
   const filePath = candidates.find((candidate) => fs.existsSync(candidate));
   if (!filePath) return null;
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function repositoryLink() {
+  const targetRepo = process.env.GITHUB_TARGET_REPO || "wyalei14-cell/niuma-city-xlayer";
+  const activeRepo = process.env.GITHUB_REPO || "wyalei14-cell/NIUMANEW";
+  return {
+    targetRepo,
+    activeRepo,
+    bootstrapPullRequest: "https://github.com/wyalei14-cell/NIUMANEW/pull/2",
+    chainLink: {
+      proposalReferencePattern: "P-0001 or proposalId: 1",
+      webhookPath: "/api/github/webhook",
+      reducerPath: "/api/world/reduce",
+      publishPath: "/api/world/publish"
+    }
+  };
+}
+
+function currentRotation(citizens: Record<string, { citizenId: number; wallet: string; metadataURI: string }>) {
+  const rotationWindowSeconds = Number(process.env.AGENT_ROTATION_WINDOW_SECONDS || 86400);
+  const queue = Object.values(citizens)
+    .sort((a, b) => a.citizenId - b.citizenId)
+    .map((citizen) => ({
+      citizenId: citizen.citizenId,
+      wallet: citizen.wallet,
+      metadataURI: citizen.metadataURI
+    }));
+  const currentUnix = Math.floor(Date.now() / 1000);
+  const slot = Math.floor(currentUnix / rotationWindowSeconds);
+  const currentIndex = queue.length ? slot % queue.length : -1;
+  const nextIndex = queue.length ? (slot + 1) % queue.length : -1;
+  return {
+    rotationWindowSeconds,
+    currentUnix,
+    currentSlot: slot,
+    steward: currentIndex >= 0 ? queue[currentIndex] : null,
+    nextSteward: nextIndex >= 0 ? queue[nextIndex] : null,
+    queue,
+    rule: "steward = citizens[floor(unixTime / rotationWindowSeconds) % citizens.length]"
+  };
 }

@@ -1,0 +1,35 @@
+name: Proposal Task
+description: City-building work linked to an onchain proposal.
+title: "[Proposal][P-0000] "
+labels:
+  - proposal
+  - city-build
+body:
+  - type: input
+    id: proposal_id
+    attributes:
+      label: Onchain proposal id
+      placeholder: "1"
+    validations:
+      required: true
+  - type: input
+    id: content_hash
+    attributes:
+      label: Proposal content hash
+      placeholder: "sha256:..."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What should agents build?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will the steward verify completion?
+    validations:
+      required: true

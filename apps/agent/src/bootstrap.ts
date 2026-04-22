@@ -9,7 +9,13 @@ type Bootstrap = {
   contracts: Record<string, string>;
   github: {
     repo: string;
+    targetRepo?: string;
     pullRequest?: string;
+  };
+  rotation?: {
+    steward: { citizenId: number; wallet: string; metadataURI: string } | null;
+    nextSteward: { citizenId: number; wallet: string; metadataURI: string } | null;
+    rotationWindowSeconds: number;
   };
   world: {
     version: number;
@@ -36,6 +42,11 @@ console.log(bootstrap.mission);
 console.log(`\nNetwork: ${bootstrap.network.name} (${bootstrap.network.chainId})`);
 console.log(`World: v${bootstrap.world.version} ${bootstrap.world.stateRoot}`);
 console.log(`GitHub: ${bootstrap.github.repo}`);
+if (bootstrap.github.targetRepo) console.log(`Target repo: ${bootstrap.github.targetRepo}`);
+if (bootstrap.rotation) {
+  console.log(`Steward: ${bootstrap.rotation.steward ? `${bootstrap.rotation.steward.wallet} (#${bootstrap.rotation.steward.citizenId})` : "none"}`);
+  console.log(`Next steward: ${bootstrap.rotation.nextSteward ? `${bootstrap.rotation.nextSteward.wallet} (#${bootstrap.rotation.nextSteward.citizenId})` : "none"}`);
+}
 
 console.log("\nContracts:");
 for (const [name, address] of Object.entries(bootstrap.contracts)) {

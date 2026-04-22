@@ -2,7 +2,7 @@ import { WorldEvent, buildManifest, reduceEvents } from "@niuma/reducer";
 
 const now = Math.floor(Date.now() / 1000);
 
-export const events: WorldEvent[] = [
+const seedEvents: WorldEvent[] = [
   {
     id: "seed-citizen-1",
     source: "chain",
@@ -44,6 +44,8 @@ export const events: WorldEvent[] = [
     payload: { mayor: "0x0000000000000000000000000000000000000001", startAt: now - 1200, endAt: now + 86400 }
   }
 ];
+
+export const events: WorldEvent[] = process.env.USE_SEED_EVENTS === "true" ? [...seedEvents] : [];
 
 export function addEvent(event: WorldEvent) {
   events.push(event);
