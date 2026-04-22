@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
 import { WebSocketServer } from "ws";
+import { JsonRpcProvider, Wallet, Contract } from "ethers";
 import { addEvent, currentWorld, events } from "./store.js";
 import { createProposalIssue, verifyGithubSignature } from "./github.js";
 import { getChainSyncStatus, syncChainEvents } from "./chain.js";
 import { WorldEvent } from "@niuma/reducer";
+import { worldStateRegistryAbi } from "@niuma/sdk";
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
@@ -225,12 +227,76 @@ app.post("/api/proposals/:id/create-issue", requireServiceAuth, async (req, res)
   res.json(issue);
 });
 
-app.post("/api/world/publish", requireServiceAuth, (_req, res) => {
-  res.status(202).json({
-    ok: true,
-    note: "Wire this endpoint to WorldStateRegistry.submitWorldVersion with a funded publisher wallet.",
-    manifest: currentWorld().manifest
-  });
+app.post("/api/world/publish", requireServiceAuth, async (_req, res) => {
+  try {
+    const world = currentWorld();
+    const manifest = world.manifest;
+
+    // Check for duplicate state root on-chain
+    const deployment = readDeployment();
+    if (!deployment?.contracts?.WorldStateRegistry) {
+      res.status(500).json({ error: "WorldStateRegistry address not configured" });
+      return;
+    }
+
+    const publisherKey = process.env.STATE_PUBLISHER_PRIVATE_KEY;
+    if (!publisherKey) {
+      res.status(500).json({
+        error: "STATE_PUBLISHER_PRIVATE_KEY not set",
+        hint: "Set this env var to a funded wallet that is a registered state publisher on WorldStateRegistry. The wallet needs OKB for gas on X Layer Testnet."
+      });
+      return;
+    }
+
+    const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
+    const provider = new JsonRpcProvider(rpcUrl);
+    const wallet = new Wallet(publisherKey, provider);
+    const registry = new Contract(deployment.contracts.WorldStateRegistry, worldStateRegistryAbi, wallet);
+
+    // Check if publisher is authorized
+    const isPublisher = await registry.statePublishers(wallet.address);
+    if (!isPublisher) {
+      res.status(403).json({
+        error: "Wallet is not a registered state publisher",
+        wallet: wallet.address,
+        hint: "The contract owner must call setStatePublisher(wallet, true) first."
+      });
+      return;
+    }
+
+    // Get next version number
+    const latestVersion = Number(await registry.latestWorldVersion());
+    const nextVersion = latestVersion + 1;
+
+    // Build manifest URI (local artifact for now)
+    const manifestPath = `world/manifests/v${nextVersion}.json`;
+    const manifestURI = process.env.MANIFEST_URI_PREFIX
+      ? `${process.env.MANIFEST_URI_PREFIX}/v${nextVersion}.json`
+      : manifestPath;
+
+    // Write manifest artifact
+    const manifestDir = path.resolve(process.cwd(), "world", "manifests");
+    fs.mkdirSync(manifestDir, { recursive: true });
+    fs.writeFileSync(path.resolve(manifestDir, `v${nextVersion}.json`), JSON.stringify(manifest, null, 2) + "\n");
+
+    // Submit on-chain
+    const tx = await registry.submitWorldVersion(nextVersion, manifest.stateRoot, manifestURI);
+    const receipt = await tx.wait();
+
+    broadcast("archive", { type: "WorldVersionPublished", version: nextVersion, stateRoot: manifest.stateRoot, txHash: tx.hash });
+    res.json({
+      ok: true,
+      version: nextVersion,
+      stateRoot: manifest.stateRoot,
+      manifestURI,
+      manifestArtifact: manifestPath,
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "publish failed" });
+  }
 });
 
 const server = app.listen(port, () => {
