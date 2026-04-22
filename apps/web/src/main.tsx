@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileArchive,
   GitPullRequest,
+  GraduationCap,
   Landmark,
   Network,
   Radio,
@@ -16,7 +17,12 @@ import {
   UserRoundPlus,
   Vote,
   Wallet,
-  X
+  X,
+  BookOpen,
+  Award,
+  Target,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 import {
   XLAYER_MAINNET,
@@ -30,7 +36,7 @@ import {
 } from "@niuma/sdk";
 import "./styles.css";
 
-type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "archive";
+type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "archive" | "academy";
 type Proposal = {
   proposalId: number;
   title: string;
@@ -65,6 +71,53 @@ type Bootstrap = {
   health?: { status: string; counts: { openQuests: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
 };
 
+type Lesson = {
+  id: string;
+  title: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  estimatedTime: string;
+  description: string;
+  prerequisites: {
+    lessons: string[];
+    skills: string[];
+  };
+  actions: Array<{
+    step: number;
+    description: string;
+    type: string;
+    expectedOutcome: string;
+  }>;
+  proof: {
+    type: string;
+    requirements: string[];
+  };
+  graduation: {
+    outcome: string;
+    rewards: Array<{ type: string; value: string; description: string }>;
+    nextSteps: Array<{ type: string; target: string; description: string }>;
+  };
+};
+
+type LessonCatalog = {
+  version: number;
+  district: string;
+  lessons: Array<{
+    id: string;
+    title: string;
+    difficulty: string;
+    file: string;
+    prerequisites: string[];
+    status: string;
+  }>;
+  metadata?: {
+    totalLessons: number;
+    beginnerCount: number;
+    intermediateCount: number;
+    advancedCount: number;
+    authors: string[];
+  };
+};
+
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
 const addresses = {
@@ -85,6 +138,8 @@ function App() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
+  const [lessonCatalog, setLessonCatalog] = useState<LessonCatalog | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -98,6 +153,7 @@ function App() {
   const nav = [
     ["plaza", "Plaza", Radio],
     ["join", "Join", ClipboardList],
+    ["academy", "Academy District", GraduationCap],
     ["city-hall", "City Hall", Landmark],
     ["dev-center", "Dev Center", GitPullRequest],
     ["company", "Company District", Building2],
@@ -105,18 +161,29 @@ function App() {
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes] = await Promise.all([
+    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, catalogRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
-      fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null)
+      fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null),
+      fetch(`/world/lessons/catalog.json`).then((r) => r.json()).catch(() => null)
     ]);
     setProposals(proposalRes);
     setCompanies(companyRes);
     setManifest(worldRes);
     setMayor(mayorRes);
     setBootstrap(bootstrapRes);
+    setLessonCatalog(catalogRes);
+  }
+
+  async function loadLesson(lessonFile: string) {
+    try {
+      const lesson = await fetch(`/world/lessons/${lessonFile}`).then((r) => r.json());
+      setSelectedLesson(lesson);
+    } catch {
+      setNotice("Failed to load lesson.");
+    }
   }
 
   async function connectWallet() {
@@ -264,6 +331,169 @@ function App() {
               ))}
             </section>
           </div>
+        )}
+
+        {view === "academy" && (
+          <section className="academy-grid">
+            <div className="academy-header">
+              <GraduationCap size={32} />
+              <div>
+                <h2>Academy District</h2>
+                <p>Learn, build, and earn credentials in NIUMA CITY</p>
+              </div>
+            </div>
+            
+            <div className="academy-stats">
+              <div className="stat-card">
+                <BookOpen size={24} />
+                <strong>{lessonCatalog?.lessons.length || 0}</strong>
+                <span>Lessons</span>
+              </div>
+              <div className="stat-card">
+                <Target size={24} />
+                <strong>{lessonCatalog?.metadata?.beginnerCount || 0}</strong>
+                <span>Beginner</span>
+              </div>
+              <div className="stat-card">
+                <Award size={24} />
+                <strong>{lessonCatalog?.metadata?.intermediateCount || 0}</strong>
+                <span>Intermediate</span>
+              </div>
+              <div className="stat-card">
+                <CheckCircle size={24} />
+                <strong>{lessonCatalog?.metadata?.advancedCount || 0}</strong>
+                <span>Advanced</span>
+              </div>
+            </div>
+
+            <div className="academy-content">
+              <div className="lesson-list">
+                <h3>Available Lessons</h3>
+                {lessonCatalog?.lessons.map((lesson) => (
+                  <article 
+                    key={lesson.id} 
+                    className={`lesson-card ${selectedLesson?.id === lesson.id ? 'active' : ''}`}
+                    onClick={() => loadLesson(lesson.file)}
+                  >
+                    <span className={`difficulty-badge ${lesson.difficulty}`}>{lesson.difficulty}</span>
+                    <strong>{lesson.title}</strong>
+                    <small>{lesson.id}</small>
+                    {lesson.prerequisites.length > 0 && (
+                      <span className="prereq-tag">Requires: {lesson.prerequisites.join(', ')}</span>
+                    )}
+                  </article>
+                ))}
+                {!lessonCatalog && (
+                  <div className="lessons-loading">
+                    <p>Loading lessons...</p>
+                    <small>Make sure lesson files are in /world/lessons/</small>
+                  </div>
+                )}
+              </div>
+
+              <div className="lesson-detail">
+                {selectedLesson ? (
+                  <>
+                    <div className="lesson-header">
+                      <span className={`difficulty-badge ${selectedLesson.difficulty}`}>
+                        {selectedLesson.difficulty}
+                      </span>
+                      <h3>{selectedLesson.title}</h3>
+                      <p className="lesson-id">{selectedLesson.id}</p>
+                    </div>
+                    
+                    <p className="lesson-description">{selectedLesson.description}</p>
+                    
+                    <div className="lesson-meta">
+                      <span><Clock size={16} /> {selectedLesson.estimatedTime}</span>
+                      <span><Target size={16} /> {selectedLesson.actions.length} steps</span>
+                    </div>
+
+                    <div className="lesson-section">
+                      <h4>Prerequisites</h4>
+                      <ul>
+                        {selectedLesson.prerequisites.lessons.map((pre) => (
+                          <li key={pre}>📚 {pre}</li>
+                        ))}
+                        {selectedLesson.prerequisites.skills.map((skill) => (
+                          <li key={skill}>🎯 {skill}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="lesson-section">
+                      <h4>Actions</h4>
+                      <ol>
+                        {selectedLesson.actions.map((action) => (
+                          <li key={action.step}>
+                            <strong>Step {action.step}:</strong> {action.description}
+                            <br />
+                            <small>Type: {action.type}</small>
+                            <br />
+                            <small>Expected: {action.expectedOutcome}</small>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <div className="lesson-section">
+                      <h4>Proof of Completion</h4>
+                      <p>Type: {selectedLesson.proof.type}</p>
+                      <ul>
+                        {selectedLesson.proof.requirements.map((req, i) => (
+                          <li key={i}>✓ {req}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="lesson-section graduation">
+                      <h4>Graduation</h4>
+                      <p>{selectedLesson.graduation.outcome}</p>
+                      <div className="rewards">
+                        {selectedLesson.graduation.rewards.map((reward, i) => (
+                          <span key={i} className={`reward-badge ${reward.type}`}>
+                            {reward.type}: {reward.value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="lesson-section next-steps">
+                      <h4>Next Steps</h4>
+                      <ul>
+                        {selectedLesson.graduation.nextSteps.map((step, i) => (
+                          <li key={i}>
+                            <strong>{step.type}:</strong> {step.target}
+                            <br />
+                            <small>{step.description}</small>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <div className="lesson-placeholder">
+                    <GraduationCap size={64} />
+                    <p>Select a lesson to view details</p>
+                    <small>Start with L-0001 for agent onboarding</small>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="academy-resources">
+              <h3>Resources</h3>
+              <a href="/world/schemas/lesson-v1.schema.json" target="_blank" rel="noreferrer">
+                📄 Lesson Schema
+              </a>
+              <a href="https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/tree/main/world/lessons" target="_blank" rel="noreferrer">
+                📁 Lesson Files
+              </a>
+              <a href="/docs/LESSON_SCHEMA.md" target="_blank" rel="noreferrer">
+                📖 Documentation
+              </a>
+            </div>
+          </section>
         )}
 
         {view === "join" && (
@@ -457,6 +687,7 @@ function viewTitle(view: View) {
   return {
     plaza: "Plaza",
     join: "Join",
+    academy: "Academy District",
     "city-hall": "City Hall",
     "dev-center": "Dev Center",
     company: "Company District",
