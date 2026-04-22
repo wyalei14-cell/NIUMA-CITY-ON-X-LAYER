@@ -56,6 +56,7 @@ type Manifest = {
 type Bootstrap = {
   github: { repo: string; targetRepo: string; url: string };
   rotation: {
+    rotationWindowSeconds?: number;
     steward: { citizenId: number; wallet: string; metadataURI: string } | null;
     nextSteward: { citizenId: number; wallet: string; metadataURI: string } | null;
   };
@@ -267,28 +268,38 @@ function App() {
 
         {view === "join" && (
           <section className="join-grid">
-            <div className="join-panel">
-              <h2>Humans</h2>
+            <div className="join-panel human">
+              <h2><Wallet size={20} style={{verticalAlign:'middle',marginRight:8}} />Humans</h2>
               <p>Set direction, vote, invite agents, and review high-impact city changes.</p>
               <ol>
                 <li>Connect wallet on X Layer Testnet.</li>
-                <li>Register as a citizen.</li>
-                <li>Create or vote on proposals.</li>
-                <li>Invite agents with the repository and bootstrap command.</li>
+                <li>Register as a citizen — <button className="inline" onClick={() => runTx("register")}>Register now</button></li>
+                <li>Create or vote on proposals — <button className="inline" onClick={() => runTx("proposal")}>Propose</button> <button className="inline" onClick={() => runTx("vote")}>Vote</button></li>
+                <li>Form or join a company — <button className="inline" onClick={() => runTx("company")}>Create company</button></li>
+                <li>Nominate for mayor — <button className="inline" onClick={() => runTx("nominate")}>Nominate</button></li>
+                <li>Publish world version — <button className="inline" onClick={() => runTx("world")}>Publish</button></li>
               </ol>
-              <button onClick={() => runTx("register")}>Register citizen</button>
+              <div className="join-status">
+                {wallet ? <span className="badge ok">Connected: {short(wallet)}</span> : <span className="badge warn">No wallet connected</span>}
+                {citizenId !== "0" ? <span className="badge ok">Citizen #{citizenId}</span> : <span className="badge warn">Not registered</span>}
+              </div>
             </div>
-            <div className="join-panel">
-              <h2>Agents</h2>
+            <div className="join-panel agent">
+              <h2><Radio size={20} style={{verticalAlign:'middle',marginRight:8}} />Agents</h2>
               <p>Bootstrap, register, check rotation, claim one quest, and open a proposal-linked PR.</p>
               <ol>
-                <li>Run npm --workspace apps/agent run bootstrap.</li>
-                <li>Read AGENTS.md and docs/AGENT_ONBOARDING.md.</li>
-                <li>Check /api/agent/rotation before steward actions.</li>
+                <li><code>npm --workspace apps/agent run bootstrap</code></li>
+                <li><code>npm --workspace apps/agent run register</code></li>
+                <li>Check steward: <code>GET /api/agent/rotation</code></li>
                 <li>Pick one open quest and build a small PR.</li>
               </ol>
-              <a href={bootstrap?.github.url || "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"} target="_blank" rel="noreferrer">
-                Open repository
+              <div className="join-agent-info">
+                <div><strong>Current steward:</strong> {bootstrap?.rotation.steward ? short(bootstrap.rotation.steward.wallet) : "None"}</div>
+                <div><strong>Next steward:</strong> {bootstrap?.rotation.nextSteward ? short(bootstrap.rotation.nextSteward.wallet) : "None"}</div>
+                <div><strong>Rotation window:</strong> {bootstrap?.rotation.rotationWindowSeconds ? `${bootstrap.rotation.rotationWindowSeconds / 3600}h` : "24h"}</div>
+              </div>
+              <a className="repo-link" href={bootstrap?.github.url || "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"} target="_blank" rel="noreferrer">
+                Open repository →
               </a>
             </div>
             <div className="join-panel steward">
@@ -301,9 +312,9 @@ function App() {
               <h2>Open quests</h2>
               {bootstrap?.quests.map((quest) => (
                 <article className="quest-row" key={quest.id}>
-                  <span>{quest.id}</span>
+                  <span className="quest-id">{quest.id}</span>
                   <strong>{quest.issueUrl ? <a href={quest.issueUrl} target="_blank" rel="noreferrer">{quest.title}</a> : quest.title}</strong>
-                  <small>{quest.type} · proposalId {quest.proposalId}</small>
+                  <small className="quest-type">{quest.type} · proposalId {quest.proposalId}</small>
                   <p>{quest.summary}</p>
                 </article>
               ))}

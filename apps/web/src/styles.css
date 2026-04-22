@@ -387,6 +387,79 @@ h2 {
   color: #a8aca1;
 }
 
+.join-panel.human {
+  border-color: rgba(213, 255, 95, 0.25);
+}
+
+.join-panel.agent {
+  border-color: rgba(95, 168, 255, 0.25);
+}
+
+.join-panel .join-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.join-panel .badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.join-panel .badge.ok {
+  background: rgba(213, 255, 95, 0.15);
+  color: #d5ff5f;
+}
+
+.join-panel .badge.warn {
+  background: rgba(255, 170, 95, 0.15);
+  color: #ffaa5f;
+}
+
+.join-panel .inline {
+  display: inline;
+  min-height: auto;
+  padding: 2px 8px;
+  font-size: 13px;
+  vertical-align: baseline;
+  margin: 0 2px;
+}
+
+.join-panel .join-agent-info {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.join-panel .join-agent-info strong {
+  color: #f4f1e8;
+}
+
+.join-panel .repo-link {
+  margin-top: 12px;
+}
+
+.join-panel code {
+  background: rgba(244, 241, 232, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', Menlo, monospace;
+}
+
+.quest-row .quest-id {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-weight: 700;
+  color: #d5ff5f;
+}
+
+.quest-row .quest-type {
+  color: #a8aca1;
+}
+
 .quest-list {
   grid-column: 1 / -1;
 }
