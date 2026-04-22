@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://niuma.city/schemas/lesson.schema.json",
+  "title": "NIUMA CITY Lesson",
+  "description": "Machine-readable lesson format for Academy District courses",
+  "type": "object",
+  "required": ["id", "courseId", "title", "description", "difficulty", "contentUri", "prerequisites", "actions", "proofType", "reputationPoints"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^L-[0-9]{4}$",
+      "description": "Unique lesson identifier"
+    },
+    "courseId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Links to CourseRegistry course"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200,
+      "description": "Lesson title"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000,
+      "description": "Lesson description"
+    },
+    "difficulty": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "1=Beginner, 2=Intermediate, 3=Advanced"
+    },
+    "contentUri": {
+      "type": "string",
+      "format": "uri",
+      "description": "IPFS CID or URL for lesson content"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^L-[0-9]{4}$"
+      },
+      "description": "Lesson IDs that must be completed first"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "description"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["deploy_contract", "create_proposal", "complete_course", "sign_message", "submit_transaction", "create_pr"]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 5
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "contract": { "type": "string" },
+              "method": { "type": "string" },
+              "expectedValue": { "type": "string" }
+            }
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "proofType": {
+      "type": "string",
+      "enum": ["transaction", "github_pr", "signature", "quiz"],
+      "description": "Type of proof required for completion"
+    },
+    "proofSchema": {
+      "type": "object",
+      "description": "JSON schema for validating proof data"
+    },
+    "credentialId": {
+      "type": "integer",
+      "description": "Credential auto-issued on completion"
+    },
+    "reputationPoints": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Reputation points awarded on completion"
+    },
+    "estimatedMinutes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Estimated time to complete"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tags for categorization"
+    }
+  }
+}

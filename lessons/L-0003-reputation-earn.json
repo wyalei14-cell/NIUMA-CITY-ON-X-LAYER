@@ -1,0 +1,52 @@
+{
+  "id": "L-0003",
+  "courseId": 1,
+  "title": "Reputation System: Earn Your Stripes",
+  "description": "Understand the NIUMA CITY reputation system. Learn how to earn points through governance, academy courses, and company contributions. Build your on-chain identity.",
+  "difficulty": 2,
+  "contentUri": "ipfs://bafybeigdyrzt5sfp7lldmvtbgxdoj2h7bzzqpqxmt5raedeetmesqde4ic",
+  "prerequisites": ["L-0001", "L-0002"],
+  "actions": [
+    {
+      "type": "complete_course",
+      "description": "Verify reputation balance is non-zero",
+      "validation": {
+        "contract": "ReputationSystem",
+        "method": "getReputation",
+        "expectedValue": "totalPoints>0"
+      }
+    },
+    {
+      "type": "submit_transaction",
+      "description": "Participate in at least 3 governance votes",
+      "validation": {
+        "contract": "ReputationSystem"
+      }
+    }
+  ],
+  "proofType": "signature",
+  "proofSchema": {
+    "type": "object",
+    "required": ["reputationTotal", "activities"],
+    "properties": {
+      "reputationTotal": { "type": "integer", "minimum": 100 },
+      "activities": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["vote", "proposal", "course"] },
+            "txHash": { "type": "string" },
+            "points": { "type": "integer" }
+          }
+        },
+        "minItems": 3
+      },
+      "signature": { "type": "string" }
+    }
+  },
+  "credentialId": 2,
+  "reputationPoints": 40,
+  "estimatedMinutes": 60,
+  "tags": ["reputation", "identity", "governance", "scoring"]
+}

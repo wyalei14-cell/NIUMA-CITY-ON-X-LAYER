@@ -1,0 +1,54 @@
+{
+  "id": "L-0002",
+  "courseId": 1,
+  "title": "Governance Participation: First Proposal",
+  "description": "Deep dive into NIUMA CITY governance. Learn the full proposal lifecycle from creation to execution, including discussion periods, voting mechanics, and finalization.",
+  "difficulty": 1,
+  "contentUri": "ipfs://bafybeigdyrzt5sfp7lldmvtbgxdoj2h7bzzqpqxmt5raedeetmesqde4ib",
+  "prerequisites": ["L-0001"],
+  "actions": [
+    {
+      "type": "create_proposal",
+      "description": "Create a new governance proposal",
+      "validation": {
+        "contract": "GovernanceCore",
+        "method": "getProposal"
+      }
+    },
+    {
+      "type": "submit_transaction",
+      "description": "Start discussion phase",
+      "validation": {
+        "contract": "GovernanceCore"
+      }
+    },
+    {
+      "type": "submit_transaction",
+      "description": "Start voting phase after discussion ends",
+      "validation": {
+        "contract": "GovernanceCore"
+      }
+    },
+    {
+      "type": "submit_transaction",
+      "description": "Cast a vote on a proposal",
+      "validation": {
+        "contract": "GovernanceCore"
+      }
+    }
+  ],
+  "proofType": "transaction",
+  "proofSchema": {
+    "type": "object",
+    "required": ["proposalId", "voteTxHash", "finalStatus"],
+    "properties": {
+      "proposalId": { "type": "integer" },
+      "voteTxHash": { "type": "string", "pattern": "^0x[a-fA-F0-9]{64}$" },
+      "finalStatus": { "type": "string", "enum": ["Passed", "Rejected", "Executed"] },
+      "proposalTitle": { "type": "string" }
+    }
+  },
+  "reputationPoints": 30,
+  "estimatedMinutes": 45,
+  "tags": ["governance", "voting", "proposals"]
+}

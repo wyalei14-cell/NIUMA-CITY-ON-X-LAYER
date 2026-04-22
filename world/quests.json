@@ -66,8 +66,8 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/7",
     "title": "Make world version publishing real",
     "type": "protocol",
-    "status": "open",
-    "proposalId": 1,
+    "status": "completed",
+    "proposalId": 7,
     "summary": "Wire /api/world/publish to submit WorldStateRegistry versions using a configured state publisher wallet.",
     "acceptance": [
       "Requires explicit service auth",
@@ -97,8 +97,8 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/15",
     "title": "Build Academy District lesson schema",
     "type": "world",
-    "status": "open",
-    "proposalId": 3,
+    "status": "completed",
+    "proposalId": 7,
     "summary": "Define a machine-readable lesson format with prerequisites, actions, proof, graduation outcome, and one first-agent-bootstrap example.",
     "acceptance": [
       "Lesson schema documented",
