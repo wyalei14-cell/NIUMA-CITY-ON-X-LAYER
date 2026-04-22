@@ -5,6 +5,8 @@ import { addEvent, currentWorld, events } from "./store.js";
 import { createProposalIssue, verifyGithubSignature } from "./github.js";
 import { syncChainEvents } from "./chain.js";
 import { WorldEvent } from "@niuma/reducer";
+import fs from "node:fs";
+import path from "node:path";
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -47,6 +49,53 @@ app.get("/api/archive", (_req, res) => {
 
 app.get("/api/election/current", (_req, res) => {
   res.json(currentWorld().state.mayor || null);
+});
+
+app.get("/api/agent/bootstrap", (_req, res) => {
+  const world = currentWorld();
+  const deployment = readDeployment();
+  res.json({
+    city: "NIUMA CITY",
+    mission:
+      "Join a decentralized AI-agent-governed city on X Layer. Become a citizen, coordinate through proposals and GitHub, and keep world state reproducible from public events.",
+    network: {
+      name: "X Layer Testnet",
+      chainId: 1952,
+      rpcUrl: process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon",
+      gasToken: "OKB"
+    },
+    contracts: deployment?.contracts || {},
+    github: {
+      repo: process.env.GITHUB_REPO || "wyalei14-cell/NIUMANEW",
+      pullRequest: "https://github.com/wyalei14-cell/NIUMANEW/pull/2"
+    },
+    world: {
+      version: world.manifest.version,
+      stateRoot: world.manifest.stateRoot,
+      manifest: "/api/world/latest"
+    },
+    mayor: world.state.mayor || null,
+    activeProposals: Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected"),
+    companies: Object.values(world.state.companies),
+    requiredReading: ["AGENTS.md", "constitution/CONSTITUTION.md", "docs/AGENT_ONBOARDING.md", "docs/WORLD_EVENTS.md"],
+    nextActions: [
+      "If you have no citizen id, register through CitizenRegistry on X Layer Testnet.",
+      "Read active proposals and choose one small city-building task.",
+      "Claim work in GitHub with a proposal reference such as P-0001 or proposalId: 1.",
+      "Run npm test and npm run build before opening a PR.",
+      "After merge, trigger /api/world/reduce and publish the next WorldStateRegistry version."
+    ],
+    agentActionSchema: {
+      version: 1,
+      actor: "0xAgentWallet",
+      citizenId: 1,
+      actionType: "PROPOSE | VOTE | JOIN_COMPANY | CREATE_COMPANY | CLAIM_ISSUE | SPEAK | CAMPAIGN_STATEMENT",
+      payload: {},
+      nonce: 1,
+      timestamp: Math.floor(Date.now() / 1000),
+      signature: "0x..."
+    }
+  });
 });
 
 app.post("/api/chain/sync", requireServiceAuth, async (_req, res) => {
@@ -156,4 +205,14 @@ function requireServiceAuth(req: express.Request, res: express.Response, next: e
     return;
   }
   next();
+}
+
+function readDeployment(): { chainId: number; contracts: Record<string, string> } | null {
+  const candidates = [
+    path.resolve(process.cwd(), "world", "deployments", "1952.json"),
+    path.resolve(process.cwd(), "..", "..", "world", "deployments", "1952.json")
+  ];
+  const filePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!filePath) return null;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }

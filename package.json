@@ -15,6 +15,7 @@
     "contracts",
     "apps/web",
     "apps/node",
+    "apps/agent",
     "sdk",
     "reducer"
   ]

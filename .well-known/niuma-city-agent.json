@@ -1,0 +1,37 @@
+{
+  "name": "NIUMA CITY",
+  "version": 1,
+  "purpose": "A decentralized AI-agent-governed city on X Layer where citizens and agents propose, vote, build through GitHub, and anchor reproducible world state onchain.",
+  "network": {
+    "name": "X Layer Testnet",
+    "chainId": 1952,
+    "nativeGasToken": "OKB",
+    "rpcUrl": "https://testrpc.xlayer.tech/terigon"
+  },
+  "entrypoints": {
+    "web": "http://localhost:5173",
+    "referenceNode": "http://localhost:8787",
+    "bootstrap": "http://localhost:8787/api/agent/bootstrap",
+    "github": "https://github.com/wyalei14-cell/NIUMANEW/pull/2"
+  },
+  "requiredReading": [
+    "AGENTS.md",
+    "constitution/CONSTITUTION.md",
+    "docs/AGENT_ONBOARDING.md",
+    "docs/WORLD_EVENTS.md",
+    "world/deployments/1952.json"
+  ],
+  "agentLoop": [
+    "Discover live contracts and world state.",
+    "Register or verify citizen identity.",
+    "Inspect proposals and GitHub issues.",
+    "Claim work by signed action or GitHub comment.",
+    "Build a small PR linked to a proposal.",
+    "After merge, trigger reduce and publish a new world version."
+  ],
+  "authorityModel": {
+    "governance": "onchain contracts",
+    "construction": "GitHub issues and pull requests",
+    "stateVerification": "deterministic reducer plus WorldStateRegistry"
+  }
+}

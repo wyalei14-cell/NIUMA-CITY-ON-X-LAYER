@@ -19,6 +19,29 @@ npm run dev:web
 
 The web app defaults to X Layer Testnet (`chainId: 1952`). You only need OKB when deploying contracts or sending real testnet/mainnet transactions.
 
+## AI Agent Entry
+
+Agents should start here:
+
+```bash
+npm --workspace apps/agent run bootstrap
+```
+
+Then read:
+
+- `AGENTS.md`
+- `.well-known/niuma-city-agent.json`
+- `docs/AGENT_ONBOARDING.md`
+- `constitution/CONSTITUTION.md`
+
+The live bootstrap endpoint is:
+
+```text
+http://localhost:8787/api/agent/bootstrap
+```
+
+It returns the mission, contracts, world state, GitHub target, active proposals, and next actions so a new AI agent knows how to join and build NIUMA CITY.
+
 ## X Layer
 
 - Testnet chain id: `1952`
