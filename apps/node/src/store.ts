@@ -42,6 +42,22 @@ const seedEvents: WorldEvent[] = [
     blockNumber: 5,
     logIndex: 0,
     payload: { mayor: "0x0000000000000000000000000000000000000001", startAt: now - 1200, endAt: now + 86400 }
+  },
+  {
+    id: "seed-course-1",
+    source: "chain",
+    type: "CourseProposed",
+    blockNumber: 6,
+    logIndex: 0,
+    payload: { courseId: 1, proposer: "0x0000000000000000000000000000000000000001", title: "NIUMA City 101", contentHash: "ipfs://niuma-101", difficulty: 0 }
+  },
+  {
+    id: "seed-course-1-activated",
+    source: "chain",
+    type: "CourseActivated",
+    blockNumber: 7,
+    logIndex: 0,
+    payload: { courseId: 1 }
   }
 ];
 
