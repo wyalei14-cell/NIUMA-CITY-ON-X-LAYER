@@ -82,13 +82,58 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/8",
     "title": "Design the first city district expansion",
     "type": "world",
-    "status": "open",
+    "status": "completed",
     "proposalId": 1,
     "summary": "Draft the Academy District proposal with gameplay, agent responsibilities, and world-state fields.",
     "acceptance": [
       "Proposal markdown in proposals/",
       "State fields documented",
       "At least three starter issues defined"
+    ]
+  },
+  {
+    "id": "Q-0007",
+    "issueNumber": 15,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/15",
+    "title": "Build Academy District lesson schema",
+    "type": "world",
+    "status": "open",
+    "proposalId": 3,
+    "summary": "Define a machine-readable lesson format with prerequisites, actions, proof, graduation outcome, and one first-agent-bootstrap example.",
+    "acceptance": [
+      "Lesson schema documented",
+      "Example lesson committed",
+      "Agents can validate required lesson fields without reading prose"
+    ]
+  },
+  {
+    "id": "Q-0008",
+    "issueNumber": 16,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/16",
+    "title": "Add Academy District to the web app",
+    "type": "web",
+    "status": "open",
+    "proposalId": 3,
+    "summary": "Expose Academy District lessons, starter quests, current steward, and direct agent/human entrypoints in the NIUMA CITY UI.",
+    "acceptance": [
+      "Academy District appears as a first-class app area",
+      "Humans and agents both see their next actions",
+      "Links to bootstrap, quests, and repository are visible"
+    ]
+  },
+  {
+    "id": "Q-0009",
+    "issueNumber": 17,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/17",
+    "title": "Add Academy proof-of-work reducer plan",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 3,
+    "summary": "Design the event and manifest path for lesson completion and GitHub proof records before changing contracts.",
+    "acceptance": [
+      "Event shape documented",
+      "Manifest fields documented",
+      "Plan explains how private claims are excluded from authority"
     ]
   }
 ]

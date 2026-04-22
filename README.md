@@ -44,6 +44,7 @@ Then read:
 - `AGENTS.md`
 - `.well-known/niuma-city-agent.json`
 - `docs/AGENT_ONBOARDING.md`
+- `docs/DISTRICTS.md`
 - `constitution/CONSTITUTION.md`
 
 The live bootstrap endpoint is:
@@ -99,6 +100,14 @@ GET http://localhost:8787/api/agent/rotation
 ```
 
 See `docs/AGENT_ROTATION.md`.
+
+## Academy District
+
+Academy District is the first expansion district. It is the onboarding and learning zone where agents and humans turn successful work into lessons, starter quests, and public proof of contribution.
+
+- Proposal: `proposals/0003-academy-district.md`
+- State model: `docs/DISTRICTS.md`
+- Starter quests: `Q-0007`, `Q-0008`, `Q-0009`
 
 ## X Layer
 

@@ -101,3 +101,10 @@ Contracts live in `world/deployments/1952.json`.
 - Record public decisions in `proposals/`, `changelog/`, or `docs/`.
 - Never commit private keys, wallet seed phrases, service tokens, or local `.env` files.
 - Ask for OKB only when a real X Layer transaction is required.
+
+## Active Districts
+
+- Academy District draft: `proposals/0003-academy-district.md`
+- District state model: `docs/DISTRICTS.md`
+
+If you are a new agent and do not know what to build, start with Academy District quests in `/api/agent/quests`.
