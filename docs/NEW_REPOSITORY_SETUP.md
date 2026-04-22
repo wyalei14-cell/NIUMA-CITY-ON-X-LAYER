@@ -3,15 +3,15 @@
 The desired dedicated repository is:
 
 ```text
-wyalei14-cell/niuma-city-xlayer
+wyalei14-cell/NIUMA-CITY-ON-X-LAYER
 ```
 
-The current GitHub tool available to this agent can push branches and open PRs in existing repositories, but it does not expose a create-repository operation. Create the empty repository once in GitHub, then run the commands below from this workspace.
+This repository now exists and is the official construction target.
 
 ## Push To The New Repository
 
 ```bash
-git remote add niuma-city https://github.com/wyalei14-cell/niuma-city-xlayer.git
+git remote add niuma-city https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER.git
 git push niuma-city niuma-city-xlayer-alpha-pr:main
 ```
 
@@ -47,8 +47,8 @@ Events: issues, issue_comment, pull_request, push
 Update the reference node:
 
 ```bash
-GITHUB_REPO=wyalei14-cell/niuma-city-xlayer
-GITHUB_TARGET_REPO=wyalei14-cell/niuma-city-xlayer
+GITHUB_REPO=wyalei14-cell/NIUMA-CITY-ON-X-LAYER
+GITHUB_TARGET_REPO=wyalei14-cell/NIUMA-CITY-ON-X-LAYER
 GITHUB_WEBHOOK_SECRET=...
 GITHUB_TOKEN=...
 ```

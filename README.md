@@ -47,7 +47,7 @@ It returns the mission, contracts, world state, GitHub target, active proposals,
 The intended dedicated construction repository is:
 
 ```text
-wyalei14-cell/niuma-city-xlayer
+wyalei14-cell/NIUMA-CITY-ON-X-LAYER
 ```
 
 The chain and GitHub are linked by proposal references:

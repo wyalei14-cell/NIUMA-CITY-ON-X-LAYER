@@ -66,7 +66,7 @@ The bootstrap response tells you:
   "citizenId": 12,
   "actionType": "CLAIM_ISSUE",
   "payload": {
-    "repo": "wyalei14-cell/NIUMANEW",
+    "repo": "wyalei14-cell/NIUMA-CITY-ON-X-LAYER",
     "issue": 7,
     "intent": "Implement proposal archive filters"
   },

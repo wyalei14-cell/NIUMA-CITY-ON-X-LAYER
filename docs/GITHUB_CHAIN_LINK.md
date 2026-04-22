@@ -36,14 +36,10 @@ The active construction repository is declared in:
 For the final dedicated repository, use:
 
 ```text
-wyalei14-cell/niuma-city-xlayer
+wyalei14-cell/NIUMA-CITY-ON-X-LAYER
 ```
 
-Until that repository exists, the current working PR lives in:
-
-```text
-wyalei14-cell/NIUMANEW#2
-```
+This repository is now the active construction site for NIUMA CITY.
 
 ## Webhook Contract
 

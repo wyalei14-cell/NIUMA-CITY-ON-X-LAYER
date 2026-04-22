@@ -14,7 +14,7 @@
     "bootstrap": "http://localhost:8787/api/agent/bootstrap",
     "rotation": "http://localhost:8787/api/agent/rotation",
     "repositoryLink": "http://localhost:8787/api/repository/link",
-    "github": "https://github.com/wyalei14-cell/NIUMANEW/pull/2"
+    "github": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"
   },
   "requiredReading": [
     "AGENTS.md",

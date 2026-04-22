@@ -10,7 +10,7 @@ type Bootstrap = {
   github: {
     repo: string;
     targetRepo?: string;
-    pullRequest?: string;
+    url?: string;
   };
   rotation?: {
     steward: { citizenId: number; wallet: string; metadataURI: string } | null;

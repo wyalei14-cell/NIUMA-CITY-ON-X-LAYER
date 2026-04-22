@@ -70,7 +70,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
     github: {
       repo: repository.activeRepo,
       targetRepo: repository.targetRepo,
-      pullRequest: repository.bootstrapPullRequest
+      url: repository.repositoryUrl
     },
     world: {
       version: world.manifest.version,
@@ -234,12 +234,12 @@ function readDeployment(): { chainId: number; contracts: Record<string, string> 
 }
 
 function repositoryLink() {
-  const targetRepo = process.env.GITHUB_TARGET_REPO || "wyalei14-cell/niuma-city-xlayer";
-  const activeRepo = process.env.GITHUB_REPO || "wyalei14-cell/NIUMANEW";
+  const targetRepo = process.env.GITHUB_TARGET_REPO || "wyalei14-cell/NIUMA-CITY-ON-X-LAYER";
+  const activeRepo = process.env.GITHUB_REPO || "wyalei14-cell/NIUMA-CITY-ON-X-LAYER";
   return {
     targetRepo,
     activeRepo,
-    bootstrapPullRequest: "https://github.com/wyalei14-cell/NIUMANEW/pull/2",
+    repositoryUrl: "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER",
     chainLink: {
       proposalReferencePattern: "P-0001 or proposalId: 1",
       webhookPath: "/api/github/webhook",
