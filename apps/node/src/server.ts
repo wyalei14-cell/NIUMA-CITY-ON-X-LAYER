@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { WebSocketServer } from "ws";
-import { addEvent, currentWorld, events } from "./store.js";
-import { createProposalIssue, verifyGithubSignature } from "./github.js";
+import { addEvent, currentWorld, events, hasEvent } from "./store.js";
+import { autoLinkPassedProposals, createProposalIssue, verifyGithubSignature } from "./github.js";
 import { syncChainEvents } from "./chain.js";
 import { WorldEvent } from "@niuma/reducer";
 import fs from "node:fs";
@@ -134,6 +134,16 @@ app.get("/api/repository/link", (_req, res) => {
 app.post("/api/chain/sync", requireServiceAuth, async (_req, res) => {
   try {
     const result = await syncChainEvents();
+    // Q-0003: auto-link passed proposals to GitHub issues after chain sync
+    try {
+      const world = currentWorld();
+      const linked = await autoLinkPassedProposals(world.state, addEvent);
+      if (linked.length > 0) {
+        broadcast("dev-center", { type: "ProposalsAutoLinked", linked });
+      }
+    } catch (error) {
+      console.warn("Auto-link passed proposals failed", error);
+    }
     broadcast("archive", { type: "ChainSynced", result });
     res.json(result);
   } catch (error) {
@@ -204,6 +214,19 @@ app.post("/api/proposals/:id/create-issue", requireServiceAuth, async (req, res)
   res.json(issue);
 });
 
+app.post("/api/proposals/auto-link", requireServiceAuth, async (_req, res) => {
+  try {
+    const world = currentWorld();
+    const linked = await autoLinkPassedProposals(world.state, addEvent);
+    for (const item of linked) {
+      broadcast("dev-center", { type: "IssueLinked", proposalId: item.proposalId, issueNumber: item.issueNumber });
+    }
+    res.json({ ok: true, linked });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "auto-link failed" });
+  }
+});
+
 app.post("/api/world/publish", requireServiceAuth, (_req, res) => {
   res.status(202).json({
     ok: true,
@@ -220,7 +243,12 @@ const server = app.listen(port, () => {
 });
 
 setInterval(() => {
-  syncChainEvents().catch((error) => console.warn("Periodic chain sync failed", error));
+  syncChainEvents()
+    .then(() => {
+      const world = currentWorld();
+      return autoLinkPassedProposals(world.state, addEvent);
+    })
+    .catch((error) => console.warn("Periodic chain sync failed", error));
 }, Number(process.env.CHAIN_SYNC_INTERVAL_MS || 30000));
 
 const wss = new WebSocketServer({ server });
