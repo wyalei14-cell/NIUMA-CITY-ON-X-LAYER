@@ -6,6 +6,7 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:governance-executor:xlayer-testnet": "hardhat run scripts/deploy-governance-executor.ts --network xlayerTestnet",
     "deploy:xlayer-testnet": "hardhat run scripts/deploy.ts --network xlayerTestnet",
     "deploy:xlayer-mainnet": "hardhat run scripts/deploy.ts --network xlayerMainnet"
   },

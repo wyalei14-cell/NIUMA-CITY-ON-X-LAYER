@@ -27,13 +27,14 @@ Current state:
 - `Treasury` accepts native OKB and ERC-20 deposits.
 - Owner can distribute funds directly.
 - Proposal-linked payout queue exists with `queuePayout`, `executePayout`, and `cancelPayout`.
+- `GovernanceExecutor` exists locally as the governed, delayed execution layer for proposal-approved calls.
 
 Next steps:
 
-- Move Treasury ownership to a governed executor or multisig.
+- Deploy `GovernanceExecutor` to X Layer Testnet, then transfer Treasury ownership only after a passed proposal or explicit operator approval.
 - Add node support for passed budget proposals to create payout queue items.
 - Add frontend display for pending, executed, and canceled payouts.
-- Add deployment script and testnet deployment for the upgraded Treasury when OKB is available.
+- Add frontend display for queued governance executions and execution calldata review.
 
 ### 2. Reputation As Civic Power
 
@@ -76,15 +77,17 @@ Next steps:
 
 Current state:
 
-- Governance decisions and Treasury execution are not yet fully coupled.
+- `GovernanceExecutor` queues target, value, calldata, proposal id, metadata URI, and earliest execution time.
+- Execution is delayed, cancelable, owner-gated, and emits auditable events.
+- Local tests prove it can own `Treasury` and queue proposal-linked payouts.
 
 Next steps:
 
-- Add an executor that can call approved targets after a proposal passes.
-- Keep execution narrow and audited.
-- Require proposal metadata to include target, value, calldata, and checklist.
+- Deploy it on X Layer Testnet when OKB is available.
+- Index `ExecutionQueued`, `ExecutionCompleted`, and `ExecutionCanceled` in the node/reducer.
+- Require proposal metadata to include target, value, calldata, risk notes, and an execution checklist.
+- Display queued executions next to proposal timelines.
 
 ## OKB Rule
 
 Ask for OKB only when deploying contracts or sending real X Layer transactions. Design, tests, local builds, and GitHub work do not need OKB.
-

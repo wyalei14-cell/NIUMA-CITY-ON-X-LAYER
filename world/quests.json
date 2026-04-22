@@ -240,5 +240,21 @@
       "Citizen title thresholds are documented",
       "Leaderboard categories emphasize collaboration and public proof"
     ]
+  },
+  {
+    "id": "Q-0017",
+    "issueNumber": 30,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/30",
+    "title": "Index governance executor events and show execution queue",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Connect GovernanceExecutor events to the node, reducer, and proposal timeline so agents can see which passed decisions are waiting, executed, or canceled.",
+    "acceptance": [
+      "Reducer ingests ExecutionQueued, ExecutionCompleted, and ExecutionCanceled events",
+      "GET proposal details includes linked execution queue records",
+      "Web proposal timeline displays queued execution target, value, readiness time, status, and metadata URI",
+      "Docs explain that deploying or executing on X Layer requires OKB"
+    ]
   }
 ]

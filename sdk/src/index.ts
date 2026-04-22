@@ -119,6 +119,19 @@ export const citizenDelegateAbi = [
   "event Revoked(address indexed delegator,address indexed delegatee)"
 ];
 
+export const governanceExecutorAbi = [
+  "function queueExecution(uint256 proposalId,address target,uint256 value,bytes data,string metadataURI) returns (uint256)",
+  "function execute(uint256 executionId) returns (bytes)",
+  "function cancelExecution(uint256 executionId)",
+  "function setDelay(uint256 newDelaySeconds)",
+  "function delaySeconds() view returns (uint256)",
+  "function nextExecutionId() view returns (uint256)",
+  "function getExecution(uint256 executionId) view returns ((uint256 proposalId,address target,uint256 value,bytes data,string metadataURI,uint256 earliestExecuteAt,bool executed,bool canceled))",
+  "event ExecutionQueued(uint256 indexed executionId,uint256 indexed proposalId,address indexed target,uint256 value,bytes data,string metadataURI,uint256 earliestExecuteAt)",
+  "event ExecutionCompleted(uint256 indexed executionId,uint256 indexed proposalId,bytes result)",
+  "event ExecutionCanceled(uint256 indexed executionId,uint256 indexed proposalId)"
+];
+
 export const electionManagerAbi = [
   "function openRound() returns (uint256)",
   "function nominate(uint256 roundId,string statementURI)",

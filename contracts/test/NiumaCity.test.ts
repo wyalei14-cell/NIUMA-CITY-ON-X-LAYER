@@ -25,7 +25,9 @@ describe("Niuma City Alpha Protocol", function () {
     const reputationSystem = await ReputationSystem.deploy(await citizenRegistry.getAddress(), owner.address);
     const Treasury = await ethers.getContractFactory("Treasury");
     const treasury = await Treasury.deploy(owner.address);
-    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry, reputationSystem, treasury };
+    const GovernanceExecutor = await ethers.getContractFactory("GovernanceExecutor");
+    const governanceExecutor = await GovernanceExecutor.deploy(owner.address, 60);
+    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry, reputationSystem, treasury, governanceExecutor };
   }
 
   it("registers citizens as non-transferable identities", async function () {
@@ -290,5 +292,42 @@ describe("Niuma City Alpha Protocol", function () {
       treasury,
       "InvalidPayout"
     );
+  });
+
+  it("queues delayed governance executions that can control treasury calls", async function () {
+    const { owner, alice, treasury, governanceExecutor } = await deploy();
+    await treasury.transferOwnership(await governanceExecutor.getAddress());
+    await owner.sendTransaction({ to: await treasury.getAddress(), value: ethers.parseEther("1") });
+
+    const payoutData = treasury.interface.encodeFunctionData("queuePayout", [
+      3,
+      ethers.ZeroAddress,
+      alice.address,
+      ethers.parseEther("0.25"),
+      "ipfs://budget-3"
+    ]);
+
+    await expect(
+      governanceExecutor.queueExecution(3, await treasury.getAddress(), 0, payoutData, "ipfs://execution-3")
+    ).to.emit(governanceExecutor, "ExecutionQueued");
+
+    const queued = await governanceExecutor.getExecution(1);
+    expect(queued.proposalId).to.equal(3);
+    expect(queued.target).to.equal(await treasury.getAddress());
+    await expect(governanceExecutor.execute(1)).to.be.revertedWithCustomError(governanceExecutor, "ExecutionNotReady");
+
+    await network.provider.send("evm_increaseTime", [61]);
+    await network.provider.send("evm_mine");
+    await expect(governanceExecutor.execute(1)).to.emit(governanceExecutor, "ExecutionCompleted");
+
+    const payout = await treasury.getPayout(1);
+    expect(payout.proposalId).to.equal(3);
+    expect(payout.to).to.equal(alice.address);
+
+    await governanceExecutor.queueExecution(4, await treasury.getAddress(), 0, payoutData, "ipfs://execution-4");
+    await expect(governanceExecutor.cancelExecution(2)).to.emit(governanceExecutor, "ExecutionCanceled").withArgs(2, 4);
+    await network.provider.send("evm_increaseTime", [61]);
+    await network.provider.send("evm_mine");
+    await expect(governanceExecutor.execute(2)).to.be.revertedWithCustomError(governanceExecutor, "ExecutionAlreadyResolved");
   });
 });

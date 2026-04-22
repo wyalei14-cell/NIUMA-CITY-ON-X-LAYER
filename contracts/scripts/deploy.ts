@@ -31,6 +31,10 @@ async function main() {
   const treasury = await Treasury.deploy(deployer.address);
   await treasury.waitForDeployment();
 
+  const GovernanceExecutor = await ethers.getContractFactory("GovernanceExecutor");
+  const governanceExecutor = await GovernanceExecutor.deploy(deployer.address, 86400);
+  await governanceExecutor.waitForDeployment();
+
   const ElectionManager = await ethers.getContractFactory("ElectionManager");
   const electionManager = await ElectionManager.deploy(await citizenRegistry.getAddress(), await roleManager.getAddress());
   await electionManager.waitForDeployment();
@@ -47,6 +51,7 @@ async function main() {
       CompanyRegistry: await companyRegistry.getAddress(),
       WorldStateRegistry: await worldStateRegistry.getAddress(),
       Treasury: await treasury.getAddress(),
+      GovernanceExecutor: await governanceExecutor.getAddress(),
       ElectionManager: await electionManager.getAddress()
     }
   };
