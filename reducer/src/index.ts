@@ -20,8 +20,23 @@ export type WorldEvent =
   | { id: string; source: "chain"; type: "ReputationAwarded"; blockNumber: number; logIndex: number; payload: { citizen: string; reason: string; points: number; newTotal: number } }
   | { id: string; source: "chain"; type: "Delegated"; blockNumber: number; logIndex: number; payload: { delegator: string; delegatee: string } }
   | { id: string; source: "chain"; type: "Revoked"; blockNumber: number; logIndex: number; payload: { delegator: string; delegatee: string } }
+  | { id: string; source: "chain"; type: "ExecutionQueued"; blockNumber: number; logIndex: number; payload: { executionId: number; proposalId: number; target: string; value: string; data: string; metadataURI: string; earliestExecuteAt: number } }
+  | { id: string; source: "chain"; type: "ExecutionCompleted"; blockNumber: number; logIndex: number; payload: { executionId: number; proposalId: number; result: string } }
+  | { id: string; source: "chain"; type: "ExecutionCanceled"; blockNumber: number; logIndex: number; payload: { executionId: number; proposalId: number } }
   | { id: string; source: "github"; type: "IssueLinked"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; issueNumber: number; issueUrl: string } }
   | { id: string; source: "github"; type: "PullRequestMerged"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; prNumber: number; mergeCommit: string; url: string } };
+
+export type GovernanceExecution = {
+  executionId: number;
+  proposalId: number;
+  target: string;
+  value: string;
+  data: string;
+  metadataURI: string;
+  earliestExecuteAt: number;
+  status: "Queued" | "Completed" | "Canceled";
+  result?: string;
+};
 
 export interface WorldState {
   citizens: Record<string, { citizenId: number; wallet: string; metadataURI: string }>;
@@ -38,7 +53,9 @@ export interface WorldState {
     issueUrl?: string;
     linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>;
     executionHash?: string;
+    executionQueue: GovernanceExecution[];
   }>;
+  governanceExecutions: Record<string, GovernanceExecution>;
   companies: Record<string, { companyId: number; owner: string; name: string; metadataURI: string; members: string[] }>;
   mayor?: { wallet: string; startAt: number; endAt: number };
   academy: {
@@ -71,7 +88,7 @@ export interface WorldManifest {
 }
 
 export function reduceEvents(events: WorldEvent[]): WorldState {
-  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, reputation: {}, delegations: {}, archive: [] };
+  const state: WorldState = { citizens: {}, proposals: {}, governanceExecutions: {}, companies: {}, academy: { courses: {}, credentials: {} }, reputation: {}, delegations: {}, archive: [] };
   for (const event of sortEvents(events)) {
     state.archive.push(event);
     switch (event.type) {
@@ -92,7 +109,8 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
           status: "Draft",
           yesVotes: 0,
           noVotes: 0,
-          linkedPRs: []
+          linkedPRs: [],
+          executionQueue: []
         };
         break;
       case "VoteCast": {
@@ -215,6 +233,30 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
       case "Revoked":
         delete state.delegations[event.payload.delegator.toLowerCase()];
         break;
+      case "ExecutionQueued": {
+        const execution: GovernanceExecution = {
+          executionId: event.payload.executionId,
+          proposalId: event.payload.proposalId,
+          target: event.payload.target,
+          value: event.payload.value,
+          data: event.payload.data,
+          metadataURI: event.payload.metadataURI,
+          earliestExecuteAt: event.payload.earliestExecuteAt,
+          status: "Queued"
+        };
+        state.governanceExecutions[String(event.payload.executionId)] = execution;
+        const proposal = state.proposals[String(event.payload.proposalId)];
+        if (proposal) proposal.executionQueue = upsertExecution(proposal.executionQueue, execution);
+        break;
+      }
+      case "ExecutionCompleted": {
+        updateExecutionStatus(state, event.payload.executionId, event.payload.proposalId, "Completed", event.payload.result);
+        break;
+      }
+      case "ExecutionCanceled": {
+        updateExecutionStatus(state, event.payload.executionId, event.payload.proposalId, "Canceled");
+        break;
+      }
       case "IssueLinked": {
         const proposal = state.proposals[String(event.payload.proposalId)];
         if (proposal) {
@@ -231,6 +273,32 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
     }
   }
   return state;
+}
+
+function updateExecutionStatus(
+  state: WorldState,
+  executionId: number,
+  proposalId: number,
+  status: GovernanceExecution["status"],
+  result?: string
+) {
+  const existing = state.governanceExecutions[String(executionId)];
+  if (existing) {
+    existing.status = status;
+    if (result !== undefined) existing.result = result;
+  }
+  const proposal = state.proposals[String(proposalId)];
+  const queued = proposal?.executionQueue.find((execution) => execution.executionId === executionId);
+  if (queued) {
+    queued.status = status;
+    if (result !== undefined) queued.result = result;
+  }
+}
+
+function upsertExecution(executions: GovernanceExecution[], execution: GovernanceExecution) {
+  const existingIndex = executions.findIndex((item) => item.executionId === execution.executionId);
+  if (existingIndex >= 0) return executions.map((item, index) => (index === existingIndex ? execution : item));
+  return [...executions, execution].sort((a, b) => a.executionId - b.executionId);
 }
 
 export function buildManifest(input: {

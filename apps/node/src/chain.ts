@@ -49,6 +49,12 @@ const delegateAbi = [
   "event Revoked(address indexed delegator,address indexed delegatee)"
 ];
 
+const governanceExecutorAbi = [
+  "event ExecutionQueued(uint256 indexed executionId,uint256 indexed proposalId,address indexed target,uint256 value,bytes data,string metadataURI,uint256 earliestExecuteAt)",
+  "event ExecutionCompleted(uint256 indexed executionId,uint256 indexed proposalId,bytes result)",
+  "event ExecutionCanceled(uint256 indexed executionId,uint256 indexed proposalId)"
+];
+
 const proposalTypes = ["Feature", "Governance", "District", "Company"];
 const proposalStatuses = ["Draft", "Discussion", "Voting", "Passed", "Rejected", "Executed"];
 
@@ -99,7 +105,8 @@ async function syncChainEventsOnce() {
       { name: "CourseRegistry", address: deployment.contracts.CourseRegistry, abi: courseAbi, mapper: mapCourseEvent },
       { name: "CredentialRegistry", address: deployment.contracts.CredentialRegistry, abi: credentialAbi, mapper: mapCredentialEvent },
       { name: "ReputationSystem", address: deployment.contracts.ReputationSystem, abi: reputationAbi, mapper: mapReputationEvent },
-      { name: "CitizenDelegate", address: deployment.contracts.CitizenDelegate, abi: delegateAbi, mapper: mapDelegateEvent }
+      { name: "CitizenDelegate", address: deployment.contracts.CitizenDelegate, abi: delegateAbi, mapper: mapDelegateEvent },
+      { name: "GovernanceExecutor", address: deployment.contracts.GovernanceExecutor, abi: governanceExecutorAbi, mapper: mapGovernanceExecutorEvent }
     ];
 
     let added = 0;
@@ -417,6 +424,56 @@ function mapDelegateEvent(log: any): WorldEvent | undefined {
   return undefined;
 }
 
+function mapGovernanceExecutorEvent(log: any): WorldEvent | undefined {
+  const event = log.fragment?.name;
+  if (event === "ExecutionQueued") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "ExecutionQueued",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: {
+        executionId: Number(log.args.executionId),
+        proposalId: Number(log.args.proposalId),
+        target: log.args.target,
+        value: log.args.value.toString(),
+        data: log.args.data,
+        metadataURI: log.args.metadataURI,
+        earliestExecuteAt: Number(log.args.earliestExecuteAt)
+      }
+    };
+  }
+  if (event === "ExecutionCompleted") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "ExecutionCompleted",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: {
+        executionId: Number(log.args.executionId),
+        proposalId: Number(log.args.proposalId),
+        result: log.args.result
+      }
+    };
+  }
+  if (event === "ExecutionCanceled") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "ExecutionCanceled",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: {
+        executionId: Number(log.args.executionId),
+        proposalId: Number(log.args.proposalId)
+      }
+    };
+  }
+  return undefined;
+}
+
 function chainEventId(log: any) {
   return `chain-${log.blockNumber}-${log.transactionIndex}-${log.index}-${log.transactionHash}`;
 }
@@ -433,7 +490,8 @@ function loadDeployment(): Deployment | null {
           CourseRegistry: process.env.COURSE_REGISTRY || "",
           CredentialRegistry: process.env.CREDENTIAL_REGISTRY || "",
           ReputationSystem: process.env.REPUTATION_SYSTEM || "",
-          CitizenDelegate: process.env.CITIZEN_DELEGATE || ""
+          CitizenDelegate: process.env.CITIZEN_DELEGATE || "",
+          GovernanceExecutor: process.env.GOVERNANCE_EXECUTOR || ""
         }
       }
     : null;

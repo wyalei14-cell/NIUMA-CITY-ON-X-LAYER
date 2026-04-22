@@ -19,6 +19,27 @@ GitHub events do not have block coordinates and are ordered after chain events b
 - `CompanyJoined`
 - `CompanyLeft`
 - `MayorAssigned`
+- `CourseProposed`
+- `CourseActivated`
+- `CourseDeprecated`
+- `CourseCompleted`
+- `CredentialIssued`
+- `ReputationAwarded`
+- `Delegated`
+- `Revoked`
+- `ExecutionQueued`
+- `ExecutionCompleted`
+- `ExecutionCanceled`
+
+## Governance Execution Events
+
+`GovernanceExecutor` events make passed decisions inspectable before and after execution.
+
+- `ExecutionQueued`: records `executionId`, `proposalId`, target contract, value, calldata, metadata URI, and earliest execution time.
+- `ExecutionCompleted`: marks the execution complete and stores returned bytes.
+- `ExecutionCanceled`: marks the execution canceled before execution.
+
+Proposal detail responses include an `executionQueue` array when execution events exist for that proposal.
 
 ## GitHub Events
 
