@@ -50,6 +50,12 @@ app.get("/api/academy", (_req, res) => {
   });
 });
 
+app.get("/api/reputation", (_req, res) => {
+  const world = currentWorld();
+  const leaderboard = Object.values(world.state.reputation).sort((a, b) => b.totalPoints - a.totalPoints);
+  res.json({ leaderboard, total: leaderboard.length });
+});
+
 app.get("/api/world/versions", (_req, res) => {
   res.json([currentWorld().manifest]);
 });

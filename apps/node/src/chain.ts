@@ -40,6 +40,10 @@ const credentialAbi = [
   "event CredentialIssued(uint256 indexed credentialId,address indexed citizen,uint256 indexed courseId,string evidenceHash)"
 ];
 
+const reputationAbi = [
+  "event ReputationAwarded(address indexed citizen,string reason,uint256 points,uint256 newTotal)"
+];
+
 const proposalTypes = ["Feature", "Governance", "District", "Company"];
 const proposalStatuses = ["Draft", "Discussion", "Voting", "Passed", "Rejected", "Executed"];
 
@@ -88,7 +92,8 @@ async function syncChainEventsOnce() {
       { name: "CompanyRegistry", address: deployment.contracts.CompanyRegistry, abi: companyAbi, mapper: mapCompanyEvent },
       { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent },
       { name: "CourseRegistry", address: deployment.contracts.CourseRegistry, abi: courseAbi, mapper: mapCourseEvent },
-      { name: "CredentialRegistry", address: deployment.contracts.CredentialRegistry, abi: credentialAbi, mapper: mapCredentialEvent }
+      { name: "CredentialRegistry", address: deployment.contracts.CredentialRegistry, abi: credentialAbi, mapper: mapCredentialEvent },
+      { name: "ReputationSystem", address: deployment.contracts.ReputationSystem, abi: reputationAbi, mapper: mapReputationEvent }
     ];
 
     let added = 0;
@@ -364,6 +369,23 @@ function mapCredentialEvent(log: any): WorldEvent | undefined {
   };
 }
 
+function mapReputationEvent(log: any): WorldEvent | undefined {
+  if (log.fragment?.name !== "ReputationAwarded") return undefined;
+  return {
+    id: chainEventId(log),
+    source: "chain",
+    type: "ReputationAwarded",
+    blockNumber: log.blockNumber,
+    logIndex: log.index,
+    payload: {
+      citizen: log.args.citizen,
+      reason: log.args.reason,
+      points: Number(log.args.points),
+      newTotal: Number(log.args.newTotal)
+    }
+  };
+}
+
 function chainEventId(log: any) {
   return `chain-${log.blockNumber}-${log.transactionIndex}-${log.index}-${log.transactionHash}`;
 }
@@ -378,7 +400,8 @@ function loadDeployment(): Deployment | null {
           RoleManager: process.env.ROLE_MANAGER || "",
           CompanyRegistry: process.env.COMPANY_REGISTRY || "",
           CourseRegistry: process.env.COURSE_REGISTRY || "",
-          CredentialRegistry: process.env.CREDENTIAL_REGISTRY || ""
+          CredentialRegistry: process.env.CREDENTIAL_REGISTRY || "",
+          ReputationSystem: process.env.REPUTATION_SYSTEM || ""
         }
       }
     : null;

@@ -17,6 +17,7 @@ export type WorldEvent =
   | { id: string; source: "chain"; type: "CourseDeprecated"; blockNumber: number; logIndex: number; payload: { courseId: number } }
   | { id: string; source: "chain"; type: "CourseCompleted"; blockNumber: number; logIndex: number; payload: { courseId: number; citizen: string } }
   | { id: string; source: "chain"; type: "CredentialIssued"; blockNumber: number; logIndex: number; payload: { credentialId: number; citizen: string; courseId: number; evidenceHash: string } }
+  | { id: string; source: "chain"; type: "ReputationAwarded"; blockNumber: number; logIndex: number; payload: { citizen: string; reason: string; points: number; newTotal: number } }
   | { id: string; source: "github"; type: "IssueLinked"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; issueNumber: number; issueUrl: string } }
   | { id: string; source: "github"; type: "PullRequestMerged"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; prNumber: number; mergeCommit: string; url: string } };
 
@@ -42,6 +43,7 @@ export interface WorldState {
     courses: Record<string, { courseId: number; proposer: string; title: string; contentHash: string; difficulty: number; status: string; completionCount: number }>;
     credentials: Record<string, { credentialId: number; citizen: string; courseId: number; evidenceHash: string; issuedAt: number }>;
   };
+  reputation: Record<string, { citizen: string; totalPoints: number; governancePoints: number; academyPoints: number; companyPoints: number }>;
   archive: WorldEvent[];
 }
 
@@ -58,6 +60,7 @@ export interface WorldManifest {
   citizenIndexRoot: string;
   socialGraphRoot: string;
   academyRoot: string;
+  reputationRoot: string;
   githubSync: {
     repo: string;
     commit: string;
@@ -65,7 +68,7 @@ export interface WorldManifest {
 }
 
 export function reduceEvents(events: WorldEvent[]): WorldState {
-  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, archive: [] };
+  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, reputation: {}, archive: [] };
   for (const event of sortEvents(events)) {
     state.archive.push(event);
     switch (event.type) {
@@ -178,6 +181,28 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
           issuedAt: event.blockNumber
         };
         break;
+      case "ReputationAwarded": {
+        const key = event.payload.citizen.toLowerCase();
+        const existing = state.reputation[key];
+        const categoryMap: Record<string, keyof Pick<typeof existing extends undefined ? never : typeof existing, "governancePoints" | "academyPoints" | "companyPoints">> = {
+          vote: "governancePoints",
+          proposal_created: "governancePoints",
+          proposal_passed: "governancePoints",
+          course_completed: "academyPoints",
+          credential_earned: "academyPoints",
+          company_founded: "companyPoints",
+          company_joined: "companyPoints"
+        };
+        const category = categoryMap[event.payload.reason] || "governancePoints";
+        state.reputation[key] = {
+          citizen: event.payload.citizen,
+          totalPoints: event.payload.newTotal,
+          governancePoints: (existing?.governancePoints ?? 0) + (category === "governancePoints" ? event.payload.points : 0),
+          academyPoints: (existing?.academyPoints ?? 0) + (category === "academyPoints" ? event.payload.points : 0),
+          companyPoints: (existing?.companyPoints ?? 0) + (category === "companyPoints" ? event.payload.points : 0)
+        };
+        break;
+      }
       case "IssueLinked": {
         const proposal = state.proposals[String(event.payload.proposalId)];
         if (proposal) {
@@ -214,6 +239,7 @@ export function buildManifest(input: {
     courses: Object.values(input.state.academy.courses).sort((a, b) => a.courseId - b.courseId),
     credentials: Object.values(input.state.academy.credentials).sort((a, b) => a.credentialId - b.credentialId)
   });
+  const reputationRoot = hashCanonical(Object.values(input.state.reputation).sort((a, b) => a.totalPoints - b.totalPoints));
   const manifestWithoutRoot = {
     version: input.version,
     constitutionHash: input.constitutionHash,
@@ -226,6 +252,7 @@ export function buildManifest(input: {
     citizenIndexRoot,
     socialGraphRoot,
     academyRoot,
+    reputationRoot,
     githubSync: { repo: input.githubRepo, commit: input.githubCommit }
   };
   const stateRoot = hashCanonical({ state: input.state, manifest: manifestWithoutRoot });
