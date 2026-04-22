@@ -639,6 +639,47 @@ h2 {
   font-weight: 700;
 }
 
+.online-list {
+  margin-top: 20px;
+}
+
+.online-list h3 {
+  margin: 0 0 8px;
+  color: #a8aca1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.online-list p {
+  color: #a8aca1;
+}
+
+.online-row {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 10px 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(244, 241, 232, 0.1);
+}
+
+.online-row span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d5ff5f;
+  box-shadow: 0 0 0 4px rgba(213, 255, 95, 0.12);
+}
+
+.online-row small {
+  color: #a8aca1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @keyframes rise {
   from {
     transform: translateY(80px);

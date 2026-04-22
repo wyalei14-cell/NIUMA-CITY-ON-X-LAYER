@@ -65,9 +65,12 @@ type Bootstrap = {
   };
   quests: Array<{ id: string; title: string; type: string; status: string; proposalId: number; summary: string; issueUrl?: string }>;
   nextActions: string[];
-  health?: { status: string; counts: { openQuests: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
+  health?: { status: string; counts: { openQuests: number; onlineCitizens?: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
+  presence?: OnlinePresence;
 };
 type Citizen = { citizenId: number; wallet: string; metadataURI: string };
+type OnlineCitizen = { wallet: string; citizenId: number; label: string; role: string; registered: boolean; lastSeenAt: number; expiresAt: number };
+type OnlinePresence = { count: number; ttlSeconds: number; citizens: OnlineCitizen[] };
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -94,6 +97,7 @@ function App() {
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
   const [academyCourses, setAcademyCourses] = useState<Array<{courseId:number;proposer:string;title:string;contentHash:string;difficulty:number;status:string;completionCount:number}>>([]);
   const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
+  const [presence, setPresence] = useState<OnlinePresence>({ count: 0, ttlSeconds: 120, citizens: [] });
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -102,6 +106,13 @@ function App() {
     const timer = window.setInterval(refresh, 15000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!wallet) return;
+    reportPresence(wallet, citizenId);
+    const timer = window.setInterval(() => reportPresence(wallet, citizenId), 45000);
+    return () => window.clearInterval(timer);
+  }, [wallet, citizenId]);
 
   const selectedProposal = proposals[0];
   const nav = [
@@ -115,14 +126,15 @@ function App() {
   ] as const;
 
   async function refresh() {
-    const [proposalRes, citizenRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes] = await Promise.all([
+    const [proposalRes, citizenRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes, presenceRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/citizens`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null),
-      fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] }))
+      fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] })),
+      fetch(`${apiBase}/api/presence/online`).then((r) => r.json()).catch(() => ({ count: 0, ttlSeconds: 120, citizens: [] }))
     ]);
     setProposals(proposalRes);
     setCitizens(citizenRes);
@@ -132,6 +144,23 @@ function App() {
     setBootstrap(bootstrapRes);
     setAcademyCourses(academyRes.courses || []);
     setAcademyCredentials(academyRes.credentials || []);
+    setPresence(presenceRes);
+  }
+
+  async function reportPresence(account = wallet, currentCitizenId = citizenId) {
+    if (!account) return;
+    await fetch(`${apiBase}/api/presence/heartbeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet: account,
+        citizenId: Number(currentCitizenId || 0),
+        role: "citizen",
+        label: currentCitizenId !== "0" ? `Citizen #${currentCitizenId}` : "Connected wallet"
+      })
+    }).catch(() => null);
+    const nextPresence = await fetch(`${apiBase}/api/presence/online`).then((r) => r.json()).catch(() => null);
+    if (nextPresence) setPresence(nextPresence);
   }
 
   async function connectWallet() {
@@ -146,10 +175,13 @@ function App() {
     const account = await signer.getAddress();
     setWallet(account);
     setChainId(Number(network.chainId));
+    let nextCitizenId = "0";
     if (addresses.citizen) {
       const registry = new Contract(addresses.citizen, citizenRegistryAbi, signer);
-      setCitizenId(String(await registry.citizenOf(account)));
+      nextCitizenId = String(await registry.citizenOf(account));
+      setCitizenId(nextCitizenId);
     }
+    await reportPresence(account, nextCitizenId);
     setNotice("Wallet connected.");
   }
 
@@ -471,11 +503,23 @@ function App() {
         <Status label="Contracts" value={contractsReady ? "Configured" : "Demo mode"} />
         <Status label="Mayor" value={mayor ? short(mayor.wallet) : "None"} />
         <Status label="Citizens" value={String(citizens.length)} />
+        <Status label="Online" value={String(presence.count)} />
         <Status label="Active proposals" value={String(manifest?.activeProposals.length || 0)} />
         <Status label="World version" value={String(manifest?.version || 0)} />
         <Status label="Recent merge" value={manifest?.completedProposals.find((p) => p.linkedPRs.length)?.linkedPRs[0]?.mergeCommit ? "Indexed" : "None"} />
         <Status label="Citizen" value={citizenId !== "0" ? `#${citizenId}` : "Unknown"} />
         <Status label="Health" value={bootstrap?.health?.status || "Unknown"} />
+        <div className="online-list">
+          <h3>Online citizens</h3>
+          {presence.citizens.length === 0 && <p>No heartbeat yet.</p>}
+          {presence.citizens.slice(0, 5).map((citizen) => (
+            <div className="online-row" key={citizen.wallet}>
+              <span />
+              <strong>{citizen.citizenId ? `#${citizen.citizenId}` : "wallet"}</strong>
+              <small>{short(citizen.wallet)}</small>
+            </div>
+          ))}
+        </div>
       </aside>
     </main>
   );

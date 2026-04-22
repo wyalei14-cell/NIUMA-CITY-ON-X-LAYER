@@ -14,6 +14,8 @@ loadEnvironment();
 const app = express();
 const port = Number(process.env.PORT || 8787);
 const rawJson = express.raw({ type: "application/json" });
+const onlineCitizenTtlSeconds = Number(process.env.ONLINE_CITIZEN_TTL_SECONDS || 120);
+const onlineCitizens = new Map<string, OnlineCitizen>();
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +26,35 @@ app.get("/api/citizens", (_req, res) => {
 
 app.get("/api/citizens/:wallet", (req, res) => {
   res.json(currentWorld().state.citizens[req.params.wallet.toLowerCase()] || null);
+});
+
+app.get("/api/presence/online", (_req, res) => {
+  res.json(onlineCitizenSnapshot());
+});
+
+app.post("/api/presence/heartbeat", (req, res) => {
+  const wallet = String(req.body?.wallet || "").trim();
+  if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+    res.status(400).json({ error: "valid wallet is required" });
+    return;
+  }
+
+  const normalizedWallet = wallet.toLowerCase();
+  const citizen = currentWorld().state.citizens[normalizedWallet];
+  const now = Math.floor(Date.now() / 1000);
+  const entry: OnlineCitizen = {
+    wallet,
+    citizenId: citizen?.citizenId || Number(req.body?.citizenId || 0),
+    metadataURI: citizen?.metadataURI || String(req.body?.metadataURI || ""),
+    label: String(req.body?.label || citizen?.metadataURI || "Online citizen").slice(0, 80),
+    role: String(req.body?.role || "citizen").slice(0, 32),
+    registered: Boolean(citizen),
+    lastSeenAt: now,
+    expiresAt: now + onlineCitizenTtlSeconds
+  };
+  onlineCitizens.set(normalizedWallet, entry);
+  broadcast("presence", { type: "CitizenOnline", citizen: entry });
+  res.json({ ok: true, citizen: entry, ttlSeconds: onlineCitizenTtlSeconds });
 });
 
 app.get("/api/proposals", (_req, res) => {
@@ -104,6 +135,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
     mayor: world.state.mayor || null,
     rotation,
     health,
+    presence: onlineCitizenSnapshot(),
     activeProposals: Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected"),
     companies: Object.values(world.state.companies),
     requiredReading: [
@@ -430,6 +462,7 @@ function stewardHealthSnapshot(
     counts: {
       events: events.length,
       citizens: Object.keys(world.state.citizens).length,
+      onlineCitizens: onlineCitizenSnapshot().count,
       activeProposals: activeProposals.length,
       openQuests: openQuests.length,
       unlinkedProposals: unlinkedProposals.length,
@@ -448,6 +481,30 @@ function stewardHealthSnapshot(
       type: quest.type
     })),
     blockers
+  };
+}
+
+type OnlineCitizen = {
+  wallet: string;
+  citizenId: number;
+  metadataURI: string;
+  label: string;
+  role: string;
+  registered: boolean;
+  lastSeenAt: number;
+  expiresAt: number;
+};
+
+function onlineCitizenSnapshot() {
+  const now = Math.floor(Date.now() / 1000);
+  for (const [wallet, citizen] of onlineCitizens.entries()) {
+    if (citizen.expiresAt <= now) onlineCitizens.delete(wallet);
+  }
+  const citizens = [...onlineCitizens.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+  return {
+    count: citizens.length,
+    ttlSeconds: onlineCitizenTtlSeconds,
+    citizens
   };
 }
 
