@@ -1,0 +1,112 @@
+{
+  "id": "L-0002",
+  "version": 1,
+  "title": "Create Your First Proposal",
+  "description": "Learn the governance process: how to create a proposal, move it through discussion and voting, and execute changes in NIUMA CITY.",
+  "difficulty": "beginner",
+  "estimatedTime": "1 hour",
+  "district": "academy",
+  "prerequisites": {
+    "lessons": ["L-0001"],
+    "skills": ["Basic understanding of governance", "Previous lesson completed"],
+    "resources": [
+      {
+        "name": "CONSTITUTION.md",
+        "url": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/blob/main/constitution/CONSTITUTION.md",
+        "type": "doc"
+      },
+      {
+        "name": "GovernanceCore Contract",
+        "url": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/tree/main/contracts",
+        "type": "code"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "step": 1,
+      "description": "Read the city constitution to understand governance rules",
+      "type": "read",
+      "resources": ["constitution/CONSTITUTION.md"],
+      "expectedOutcome": "Understanding of proposal types, voting periods, and execution rules"
+    },
+    {
+      "step": 2,
+      "description": "Draft your proposal content following the template",
+      "type": "write",
+      "resources": ["proposals/0000-proposal-template.md"],
+      "expectedOutcome": "A markdown file with proposal title, purpose, and acceptance criteria"
+    },
+    {
+      "step": 3,
+      "description": "Create the proposal on-chain via GovernanceCore",
+      "type": "code",
+      "resources": ["Use createProposal(pType, title, contentHash)"],
+      "expectedOutcome": "Proposal created with a unique proposalId"
+    },
+    {
+      "step": 4,
+      "description": "Start the discussion phase",
+      "type": "code",
+      "resources": ["Call startDiscussion(proposalId)"],
+      "expectedOutcome": "Discussion phase active, community can comment"
+    },
+    {
+      "step": 5,
+      "description": "Move to voting phase after discussion period",
+      "type": "code",
+      "resources": ["Call startVoting(proposalId)"],
+      "expectedOutcome": "Voting phase active, citizens can vote"
+    },
+    {
+      "step": 6,
+      "description": "Finalize the proposal after voting ends",
+      "type": "code",
+      "resources": ["Call finalizeProposal(proposalId)"],
+      "expectedOutcome": "Proposal status updated to Passed or Rejected"
+    }
+  ],
+  "proof": {
+    "type": "chain_tx",
+    "requirements": [
+      "On-chain proposalId from GovernanceCore",
+      "Proposal must have completed full lifecycle (discussion -> voting -> finalization)",
+      "Must be on X Layer Testnet (chainId 1952)"
+    ],
+    "validationScript": "Verify proposal exists and has status 2 (Passed) or 3 (Rejected)"
+  },
+  "graduation": {
+    "outcome": "You understand the full governance flow and can propose changes to NIUMA CITY.",
+    "rewards": [
+      {
+        "type": "role",
+        "value": "proposer",
+        "description": "Can create governance proposals"
+      },
+      {
+        "type": "reputation",
+        "value": "governance_participant",
+        "description": "Demonstrated understanding of city governance"
+      }
+    ],
+    "nextSteps": [
+      {
+        "type": "lesson",
+        "target": "L-0003",
+        "description": "Learn to claim and complete quests"
+      },
+      {
+        "type": "quest",
+        "target": "Q-0005",
+        "description": "Implement world version publishing"
+      }
+    ]
+  },
+  "metadata": {
+    "author": "NIUMA CITY Core",
+    "createdAt": "2026-04-23T03:20:00Z",
+    "updatedAt": "2026-04-23T03:20:00Z",
+    "tags": ["governance", "proposal", "voting", "constitution", "beginner"],
+    "relatedQuests": ["Q-0003", "Q-0004"]
+  }
+}
