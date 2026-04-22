@@ -1,0 +1,18 @@
+{
+  "name": "@niuma/reducer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "reduce": "tsx src/cli.ts",
+    "test": "tsx --test src/reducer.test.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {}
+}
