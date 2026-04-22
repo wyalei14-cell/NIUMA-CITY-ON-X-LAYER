@@ -1,0 +1,405 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserProvider, Contract, Eip1193Provider } from "ethers";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  FileArchive,
+  GitPullRequest,
+  Landmark,
+  Network,
+  Radio,
+  ScrollText,
+  ShieldCheck,
+  UserRoundPlus,
+  Vote,
+  Wallet,
+  X
+} from "lucide-react";
+import {
+  XLAYER_MAINNET,
+  XLAYER_TESTNET,
+  citizenRegistryAbi,
+  companyRegistryAbi,
+  electionManagerAbi,
+  governanceCoreAbi,
+  switchToXLayer,
+  worldStateRegistryAbi
+} from "@niuma/sdk";
+import "./styles.css";
+
+type View = "plaza" | "city-hall" | "dev-center" | "company" | "archive";
+type Proposal = {
+  proposalId: number;
+  title: string;
+  type: string;
+  proposer: string;
+  contentHash: string;
+  status: string;
+  yesVotes: number;
+  noVotes: number;
+  issueNumber?: number;
+  issueUrl?: string;
+  linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>;
+};
+type Company = { companyId: number; name: string; owner: string; metadataURI: string; members: string[] };
+type Manifest = {
+  version: number;
+  stateRoot: string;
+  generatedAt: number;
+  completedProposals: Proposal[];
+  activeProposals: Proposal[];
+  githubSync: { repo: string; commit: string };
+};
+
+const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
+
+const addresses = {
+  citizen: import.meta.env.VITE_CITIZEN_REGISTRY || "",
+  governance: import.meta.env.VITE_GOVERNANCE_CORE || "",
+  company: import.meta.env.VITE_COMPANY_REGISTRY || "",
+  world: import.meta.env.VITE_WORLD_STATE_REGISTRY || "",
+  election: import.meta.env.VITE_ELECTION_MANAGER || ""
+};
+
+function App() {
+  const [view, setView] = useState<View>("plaza");
+  const [wallet, setWallet] = useState("");
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [citizenId, setCitizenId] = useState<string>("0");
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
+  const [notice, setNotice] = useState("Reference node data loaded from deterministic seed events.");
+  const contractsReady = Object.values(addresses).some(Boolean);
+
+  useEffect(() => {
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const selectedProposal = proposals[0];
+  const nav = [
+    ["plaza", "Plaza", Radio],
+    ["city-hall", "City Hall", Landmark],
+    ["dev-center", "Dev Center", GitPullRequest],
+    ["company", "Company District", Building2],
+    ["archive", "Archive", FileArchive]
+  ] as const;
+
+  async function refresh() {
+    const [proposalRes, companyRes, worldRes, mayorRes] = await Promise.all([
+      fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
+      fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
+      fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
+      fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null)
+    ]);
+    setProposals(proposalRes);
+    setCompanies(companyRes);
+    setManifest(worldRes);
+    setMayor(mayorRes);
+  }
+
+  async function connectWallet() {
+    const ethereum = (window as unknown as { ethereum?: Eip1193Provider }).ethereum;
+    if (!ethereum) {
+      setNotice("No EVM wallet detected.");
+      return;
+    }
+    const provider = new BrowserProvider(ethereum);
+    const signer = await provider.getSigner();
+    const network = await provider.getNetwork();
+    const account = await signer.getAddress();
+    setWallet(account);
+    setChainId(Number(network.chainId));
+    if (addresses.citizen) {
+      const registry = new Contract(addresses.citizen, citizenRegistryAbi, signer);
+      setCitizenId(String(await registry.citizenOf(account)));
+    }
+    setNotice("Wallet connected.");
+  }
+
+  async function runTx(kind: "register" | "proposal" | "vote" | "company" | "nominate" | "world") {
+    if (!wallet) await connectWallet();
+    const provider = new BrowserProvider((window as unknown as { ethereum: Eip1193Provider }).ethereum);
+    const signer = await provider.getSigner();
+    try {
+      if (kind === "register") {
+        assertAddress(addresses.citizen, "CitizenRegistry");
+        const contract = new Contract(addresses.citizen, citizenRegistryAbi, signer);
+        const tx = await contract.registerCitizen(await signer.getAddress(), `ipfs://profile/${await signer.getAddress()}`);
+        setNotice(`Citizen registration sent: ${tx.hash}`);
+      }
+      if (kind === "proposal") {
+        assertAddress(addresses.governance, "GovernanceCore");
+        const contract = new Contract(addresses.governance, governanceCoreAbi, signer);
+        const tx = await contract.createProposal(0, "Open Academy District", `sha256:${Date.now()}`);
+        setNotice(`Proposal transaction sent: ${tx.hash}`);
+      }
+      if (kind === "vote") {
+        assertAddress(addresses.governance, "GovernanceCore");
+        const contract = new Contract(addresses.governance, governanceCoreAbi, signer);
+        const tx = await contract.vote(selectedProposal?.proposalId || 1, true);
+        setNotice(`Vote transaction sent: ${tx.hash}`);
+      }
+      if (kind === "company") {
+        assertAddress(addresses.company, "CompanyRegistry");
+        const contract = new Contract(addresses.company, companyRegistryAbi, signer);
+        const tx = await contract.createCompany("Builder Guild", "ipfs://builder-guild");
+        setNotice(`Company creation sent: ${tx.hash}`);
+      }
+      if (kind === "nominate") {
+        assertAddress(addresses.election, "ElectionManager");
+        const contract = new Contract(addresses.election, electionManagerAbi, signer);
+        const tx = await contract.nominate(1, `ipfs://campaign/${await signer.getAddress()}`);
+        setNotice(`Campaign nomination sent: ${tx.hash}`);
+      }
+      if (kind === "world") {
+        assertAddress(addresses.world, "WorldStateRegistry");
+        const contract = new Contract(addresses.world, worldStateRegistryAbi, signer);
+        const latest = await contract.latestWorldVersion();
+        const tx = await contract.submitWorldVersion(Number(latest) + 1, manifest?.stateRoot || "sha256:pending", "local://manifest");
+        setNotice(`World version publish sent: ${tx.hash}`);
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Transaction failed.");
+    }
+  }
+
+  const timeLeft = useMemo(() => {
+    if (!mayor) return "No active term";
+    const seconds = Math.max(0, mayor.endAt - Math.floor(Date.now() / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }, [mayor]);
+
+  return (
+    <main className="shell">
+      <aside className="rail">
+        <div className="brand">
+          <span>N</span>
+          <div>
+            <strong>NIUMA CITY</strong>
+            <small>X Layer Alpha</small>
+          </div>
+        </div>
+        <nav>
+          {nav.map(([id, label, Icon]) => (
+            <button className={view === id ? "active" : ""} key={id} onClick={() => setView(id)}>
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="rail-footer">
+          <button className="icon-action" title="Switch to X Layer Testnet" onClick={() => switchToXLayer(XLAYER_TESTNET)}>
+            <Network size={18} />
+          </button>
+          <button className="icon-action" title="Switch to X Layer Mainnet" onClick={() => switchToXLayer(XLAYER_MAINNET)}>
+            <ShieldCheck size={18} />
+          </button>
+        </div>
+      </aside>
+
+      <section className="workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">{view === "plaza" ? "X Layer decentralized world" : "NIUMA CITY operations"}</p>
+            <h1>{view === "plaza" ? "NIUMA CITY" : viewTitle(view)}</h1>
+          </div>
+          <button className="primary" onClick={connectWallet}>
+            <Wallet size={18} />
+            {wallet ? short(wallet) : "Connect"}
+          </button>
+        </header>
+
+        <div className="notice">
+          <Radio size={16} />
+          <span>{notice}</span>
+          <button title="Dismiss" onClick={() => setNotice("")}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {view === "plaza" && (
+          <div className="plaza-grid">
+            <section className="city-plane">
+              <div className="skyline">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="city-copy">
+                <p>Live world root</p>
+                <strong>{manifest?.stateRoot ? shortHash(manifest.stateRoot) : "Waiting for node"}</strong>
+                <span>Public events reduce into one verifiable city state.</span>
+              </div>
+            </section>
+            <section className="stream">
+              <h2>Proposal stream</h2>
+              {proposals.map((proposal) => (
+                <ProposalRow key={proposal.proposalId} proposal={proposal} />
+              ))}
+            </section>
+          </div>
+        )}
+
+        {view === "city-hall" && (
+          <section className="operations">
+            <ActionPanel
+              icon={<UserRoundPlus />}
+              title="Citizen"
+              meta={citizenId !== "0" ? `Citizen #${citizenId}` : "Not registered"}
+              actions={[
+                ["Register", () => runTx("register")],
+                ["Nominate", () => runTx("nominate")]
+              ]}
+            />
+            <ActionPanel
+              icon={<ScrollText />}
+              title="Governance"
+              meta={`${proposals.length} indexed proposals`}
+              actions={[
+                ["Propose", () => runTx("proposal")],
+                ["Vote yes", () => runTx("vote")]
+              ]}
+            />
+            <ActionPanel icon={<Vote />} title="Mayor" meta={mayor ? `${short(mayor.wallet)} · ${timeLeft}` : "No active mayor"} actions={[["Refresh", refresh]]} />
+          </section>
+        )}
+
+        {view === "dev-center" && (
+          <section className="dev-map">
+            {proposals.map((proposal) => (
+              <div className="lane" key={proposal.proposalId}>
+                <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
+                <strong>{proposal.title}</strong>
+                <ChevronRight />
+                <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
+                <ChevronRight />
+                <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {view === "company" && (
+          <section className="operations">
+            <ActionPanel icon={<Building2 />} title="Create company" meta="One active company per citizen" actions={[["Create", () => runTx("company")]]} />
+            <div className="table">
+              {companies.map((company) => (
+                <div className="table-row" key={company.companyId}>
+                  <strong>{company.name}</strong>
+                  <span>{short(company.owner)}</span>
+                  <span>{company.members.length} members</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {view === "archive" && (
+          <section className="archive">
+            <div>
+              <p>World version</p>
+              <strong>#{manifest?.version || 0}</strong>
+            </div>
+            <div>
+              <p>GitHub sync</p>
+              <strong>{manifest?.githubSync.repo || "local"}</strong>
+            </div>
+            <div>
+              <p>Completed proposals</p>
+              <strong>{manifest?.completedProposals.length || 0}</strong>
+            </div>
+            <button className="primary" onClick={() => runTx("world")}>
+              <CheckCircle2 size={18} />
+              Publish version
+            </button>
+          </section>
+        )}
+      </section>
+
+      <aside className="inspector">
+        <h2>City state</h2>
+        <Status label="Network" value={chainId ? String(chainId) : "Not connected"} />
+        <Status label="Contracts" value={contractsReady ? "Configured" : "Demo mode"} />
+        <Status label="Mayor" value={mayor ? short(mayor.wallet) : "None"} />
+        <Status label="Active proposals" value={String(manifest?.activeProposals.length || 0)} />
+        <Status label="World version" value={String(manifest?.version || 0)} />
+        <Status label="Recent merge" value={manifest?.completedProposals.find((p) => p.linkedPRs.length)?.linkedPRs[0]?.mergeCommit ? "Indexed" : "None"} />
+        <Status label="Citizen" value={citizenId !== "0" ? `#${citizenId}` : "Unknown"} />
+      </aside>
+    </main>
+  );
+}
+
+function ProposalRow({ proposal }: { proposal: Proposal }) {
+  return (
+    <article className="proposal-row">
+      <span>{proposal.type}</span>
+      <strong>{proposal.title}</strong>
+      <small>{proposal.status}</small>
+      <div>
+        <b>{proposal.yesVotes}</b> yes
+        <b>{proposal.noVotes}</b> no
+      </div>
+    </article>
+  );
+}
+
+function ActionPanel({ icon, title, meta, actions }: { icon: React.ReactNode; title: string; meta: string; actions: Array<[string, () => void]> }) {
+  return (
+    <div className="action-panel">
+      <div className="action-icon">{icon}</div>
+      <h2>{title}</h2>
+      <p>{meta}</p>
+      <div>
+        {actions.map(([label, onClick]) => (
+          <button key={label} onClick={onClick}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Status({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="status">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function viewTitle(view: View) {
+  return {
+    plaza: "Plaza",
+    "city-hall": "City Hall",
+    "dev-center": "Dev Center",
+    company: "Company District",
+    archive: "Archive"
+  }[view];
+}
+
+function short(value: string) {
+  return value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "";
+}
+
+function shortHash(value: string) {
+  return `${value.slice(0, 13)}...${value.slice(-10)}`;
+}
+
+function assertAddress(address: string, name: string) {
+  if (!address) throw new Error(`${name} address is not configured. Deploy contracts and set VITE_* env variables.`);
+}
+
+createRoot(document.getElementById("root")!).render(<App />);

@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+coverage
+cache
+artifacts
+typechain-types
+*.tsbuildinfo
+.env
+.env.local
+apps/web/.env.local
+contracts/.env
+world/generated
+*.log

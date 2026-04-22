@@ -1,0 +1,21 @@
+{
+  "name": "niuma-city-xlayer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Niuma City on X Layer decentralized agent-governed world alpha.",
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:node": "npm --workspace apps/node run dev",
+    "test": "npm --workspace contracts test && npm --workspace reducer test",
+    "deploy:xlayer-testnet": "npm --workspace contracts run deploy:xlayer-testnet",
+    "reduce": "npm --workspace reducer run reduce"
+  },
+  "workspaces": [
+    "contracts",
+    "apps/web",
+    "apps/node",
+    "sdk",
+    "reducer"
+  ]
+}

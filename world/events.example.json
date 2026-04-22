@@ -1,0 +1,28 @@
+[
+  {
+    "id": "chain-1-0",
+    "source": "chain",
+    "type": "CitizenRegistered",
+    "blockNumber": 1,
+    "logIndex": 0,
+    "payload": {
+      "citizenId": 1,
+      "owner": "0x0000000000000000000000000000000000000001",
+      "metadataURI": "ipfs://citizen-1"
+    }
+  },
+  {
+    "id": "chain-2-0",
+    "source": "chain",
+    "type": "ProposalCreated",
+    "blockNumber": 2,
+    "logIndex": 0,
+    "payload": {
+      "proposalId": 1,
+      "proposer": "0x0000000000000000000000000000000000000001",
+      "pType": "Feature",
+      "title": "Add Academy District",
+      "contentHash": "sha256:academy"
+    }
+  }
+]
