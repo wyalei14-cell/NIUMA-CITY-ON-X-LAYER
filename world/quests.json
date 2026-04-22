@@ -204,10 +204,10 @@
     "type": "protocol",
     "status": "open",
     "proposalId": 4,
-    "summary": "Design the first fundable public work loop: budget proposal template, payout queue, payout history, and execution checklist for Treasury distributions.",
+    "summary": "Finish the first fundable public work loop around Treasury proposal-linked payout queues: budget proposal template, node indexing, frontend display, payout history, and execution checklist.",
     "acceptance": [
       "Budget proposal template exists",
-      "Treasury payout queue data model is documented",
+      "Treasury payout queue contract events are indexed or documented",
       "Plan states that recurring taxes require a separate explicit vote"
     ]
   },

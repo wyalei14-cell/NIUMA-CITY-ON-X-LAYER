@@ -8,7 +8,7 @@ Already present:
 
 - Citizen identity through `CitizenRegistry`
 - Governance through `GovernanceCore`
-- Treasury contract for deposits and owner-controlled distributions
+- Treasury contract for deposits, owner-controlled distributions, and proposal-linked payout queues
 - Company registry
 - Academy course and credential contracts
 - Reputation tracking
@@ -92,5 +92,6 @@ The next shippable slice should be:
 4. Quest completion proof format.
 5. Treasury budget proposal template.
 
-This slice creates a visible city without requiring immediate treasury transactions.
+Contract execution details are tracked in `docs/CONTRACT_ROADMAP.md`.
 
+This slice creates a visible city without requiring immediate treasury transactions.

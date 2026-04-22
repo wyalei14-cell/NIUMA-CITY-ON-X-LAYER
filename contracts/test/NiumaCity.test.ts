@@ -23,7 +23,9 @@ describe("Niuma City Alpha Protocol", function () {
     const credentialRegistry = await CredentialRegistry.deploy(await citizenRegistry.getAddress(), await courseRegistry.getAddress(), owner.address);
     const ReputationSystem = await ethers.getContractFactory("ReputationSystem");
     const reputationSystem = await ReputationSystem.deploy(await citizenRegistry.getAddress(), owner.address);
-    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry, reputationSystem };
+    const Treasury = await ethers.getContractFactory("Treasury");
+    const treasury = await Treasury.deploy(owner.address);
+    return { owner, alice, bob, citizenRegistry, governanceCore, roleManager, companyRegistry, worldStateRegistry, electionManager, courseRegistry, credentialRegistry, reputationSystem, treasury };
   }
 
   it("registers citizens as non-transferable identities", async function () {
@@ -255,5 +257,38 @@ describe("Niuma City Alpha Protocol", function () {
     // Can't revoke if not delegated
     await expect(citizenDelegate.connect(alice).revokeDelegation())
       .to.be.revertedWithCustomError(citizenDelegate, "NotDelegated");
+  });
+
+  it("queues, executes, and cancels treasury payouts linked to proposals", async function () {
+    const { owner, alice, bob, treasury } = await deploy();
+    await owner.sendTransaction({ to: await treasury.getAddress(), value: ethers.parseEther("2") });
+
+    await expect(treasury.queuePayout(1, ethers.ZeroAddress, alice.address, ethers.parseEther("0.5"), "ipfs://budget-1"))
+      .to.emit(treasury, "PayoutQueued")
+      .withArgs(1, 1, alice.address, ethers.ZeroAddress, ethers.parseEther("0.5"), "ipfs://budget-1");
+
+    const payout = await treasury.getPayout(1);
+    expect(payout.proposalId).to.equal(1);
+    expect(payout.to).to.equal(alice.address);
+    expect(payout.executed).to.equal(false);
+
+    await expect(treasury.executePayout(1)).to.changeEtherBalances(
+      [treasury, alice],
+      [-ethers.parseEther("0.5"), ethers.parseEther("0.5")]
+    );
+    const executed = await treasury.getPayout(1);
+    expect(executed.executed).to.equal(true);
+    await expect(treasury.executePayout(1)).to.be.revertedWithCustomError(treasury, "PayoutAlreadyResolved");
+
+    await treasury.queuePayout(2, ethers.ZeroAddress, bob.address, ethers.parseEther("0.25"), "ipfs://budget-2");
+    await expect(treasury.cancelPayout(2)).to.emit(treasury, "PayoutCanceled").withArgs(2, 2);
+    const canceled = await treasury.getPayout(2);
+    expect(canceled.canceled).to.equal(true);
+    await expect(treasury.executePayout(2)).to.be.revertedWithCustomError(treasury, "PayoutAlreadyResolved");
+
+    await expect(treasury.queuePayout(0, ethers.ZeroAddress, alice.address, 1, "ipfs://bad")).to.be.revertedWithCustomError(
+      treasury,
+      "InvalidPayout"
+    );
   });
 });
