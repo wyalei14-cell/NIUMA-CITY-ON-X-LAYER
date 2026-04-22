@@ -67,6 +67,7 @@ type Bootstrap = {
   nextActions: string[];
   health?: { status: string; counts: { openQuests: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
 };
+type Citizen = { citizenId: number; wallet: string; metadataURI: string };
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -86,6 +87,7 @@ function App() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [citizenId, setCitizenId] = useState<string>("0");
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [citizens, setCitizens] = useState<Citizen[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
@@ -113,8 +115,9 @@ function App() {
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes] = await Promise.all([
+    const [proposalRes, citizenRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
+      fetch(`${apiBase}/api/citizens`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
@@ -122,6 +125,7 @@ function App() {
       fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] }))
     ]);
     setProposals(proposalRes);
+    setCitizens(citizenRes);
     setCompanies(companyRes);
     setManifest(worldRes);
     setMayor(mayorRes);
@@ -401,6 +405,12 @@ function App() {
               meta={`${academyCourses.length} courses · ${academyCredentials.length} credentials`}
               actions={[["Propose Course", () => runTx("course")]]}
             />
+            <div className="academy-entrypoints">
+              <a href={`${apiBase}/api/agent/bootstrap`} target="_blank" rel="noreferrer">Bootstrap</a>
+              <a href={`${apiBase}/api/agent/quests`} target="_blank" rel="noreferrer">Quests</a>
+              <a href="https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues" target="_blank" rel="noreferrer">Issues</a>
+              <a href="https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/blob/main/proposals/P-0003-academy-district.md" target="_blank" rel="noreferrer">Proposal</a>
+            </div>
             <div className="academy-section">
               <h3>Courses</h3>
               {academyCourses.length === 0 && <p className="empty">No courses yet. Be the first to propose one!</p>}
@@ -460,6 +470,7 @@ function App() {
         <Status label="Network" value={chainId ? String(chainId) : "Not connected"} />
         <Status label="Contracts" value={contractsReady ? "Configured" : "Demo mode"} />
         <Status label="Mayor" value={mayor ? short(mayor.wallet) : "None"} />
+        <Status label="Citizens" value={String(citizens.length)} />
         <Status label="Active proposals" value={String(manifest?.activeProposals.length || 0)} />
         <Status label="World version" value={String(manifest?.version || 0)} />
         <Status label="Recent merge" value={manifest?.completedProposals.find((p) => p.linkedPRs.length)?.linkedPRs[0]?.mergeCommit ? "Indexed" : "None"} />

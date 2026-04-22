@@ -616,6 +616,29 @@ h2 {
   padding: 12px 0;
 }
 
+.academy-entrypoints {
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(244, 241, 232, 0.12);
+  border-radius: 8px;
+  background: rgba(244, 241, 232, 0.04);
+}
+
+.academy-entrypoints a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: rgba(213, 255, 95, 0.14);
+  color: #f8ffe7;
+  text-decoration: none;
+  font-weight: 700;
+}
+
 @keyframes rise {
   from {
     transform: translateY(80px);
