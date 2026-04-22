@@ -14,6 +14,8 @@ import {
   Radio,
   ScrollText,
   ShieldCheck,
+  Star,
+  Trophy,
   UserRoundPlus,
   Vote,
   Wallet,
@@ -33,7 +35,7 @@ import {
 } from "@niuma/sdk";
 import "./styles.css";
 
-type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "academy" | "archive";
+type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "academy" | "reputation" | "archive";
 type Proposal = {
   proposalId: number;
   title: string;
@@ -48,6 +50,7 @@ type Proposal = {
   linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>;
 };
 type Company = { companyId: number; name: string; owner: string; metadataURI: string; members: string[] };
+type ReputationEntry = { citizen: string; totalPoints: number; governancePoints: number; academyPoints: number; companyPoints: number; lastUpdatedAt: number };
 type Manifest = {
   version: number;
   stateRoot: string;
@@ -92,6 +95,7 @@ function App() {
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
   const [academyCourses, setAcademyCourses] = useState<Array<{courseId:number;proposer:string;title:string;contentHash:string;difficulty:number;status:string;completionCount:number}>>([]);
   const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
+  const [reputationBoard, setReputationBoard] = useState<ReputationEntry[]>([]);
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -109,17 +113,19 @@ function App() {
     ["dev-center", "Dev Center", GitPullRequest],
     ["company", "Company District", Building2],
     ["academy", "Academy", GraduationCap],
+    ["reputation", "Reputation", Star],
     ["archive", "Archive", FileArchive]
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes] = await Promise.all([
+    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes, reputationRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null),
-      fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] }))
+      fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] })),
+      fetch(`${apiBase}/api/reputation`).then((r) => r.json()).catch(() => ({ leaderboard: [], total: 0 }))
     ]);
     setProposals(proposalRes);
     setCompanies(companyRes);
@@ -128,6 +134,7 @@ function App() {
     setBootstrap(bootstrapRes);
     setAcademyCourses(academyRes.courses || []);
     setAcademyCredentials(academyRes.credentials || []);
+    setReputationBoard(reputationRes.leaderboard || []);
   }
 
   async function connectWallet() {
@@ -433,6 +440,48 @@ function App() {
           </section>
         )}
 
+        {view === "reputation" && (
+          <section className="operations">
+            <ActionPanel
+              icon={<Star />}
+              title="Reputation System"
+              meta={`${reputationBoard.length} citizens tracked · ${reputationBoard.reduce((s, r) => s + r.totalPoints, 0)} total points`}
+              actions={[["Refresh", refresh] as [string, () => void]]}
+            />
+            <div className="academy-section">
+              <h3><Trophy size={18} style={{verticalAlign:'middle',marginRight:8}} />Leaderboard</h3>
+              {reputationBoard.length === 0 && <p className="empty">No reputation data yet. Participate in governance, courses, or companies to earn points!</p>}
+              <div className="table">
+                {reputationBoard.map((entry, idx) => {
+                  const rank = idx + 1;
+                  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+                  return (
+                    <div className="table-row" key={entry.citizen}>
+                      <span className="rank-medal">{medal}</span>
+                      <strong className="rep-citizen">{short(entry.citizen)}</strong>
+                      <span className="rep-total">{entry.totalPoints} pts</span>
+                      <span className="rep-breakdown">
+                        <small title="Governance">🏛 {entry.governancePoints}</small>
+                        <small title="Academy">🎓 {entry.academyPoints}</small>
+                        <small title="Company">🏢 {entry.companyPoints}</small>
+                      </span>
+                      <span className="rep-updated">{timeAgo(entry.lastUpdatedAt)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="academy-section">
+              <h3>How points are earned</h3>
+              <div className="rep-rules">
+                <div className="rep-rule"><strong>Governance</strong><span>Vote +10 · Propose +25 · Pass +50</span></div>
+                <div className="rep-rule"><strong>Academy</strong><span>Course completed +30 · Credential earned +40</span></div>
+                <div className="rep-rule"><strong>Company</strong><span>Founded +20 · Joined +10</span></div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {view === "archive" && (
           <section className="archive">
             <div>
@@ -518,6 +567,7 @@ function viewTitle(view: View) {
     "dev-center": "Dev Center",
     company: "Company District",
     academy: "Academy",
+    reputation: "Reputation",
     archive: "Archive"
   }[view];
 }
@@ -528,6 +578,15 @@ function short(value: string) {
 
 function shortHash(value: string) {
   return `${value.slice(0, 13)}...${value.slice(-10)}`;
+}
+
+function timeAgo(timestamp: number): string {
+  if (!timestamp) return "never";
+  const seconds = Math.floor(Date.now() / 1000) - timestamp;
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 function assertAddress(address: string, name: string) {

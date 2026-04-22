@@ -616,6 +616,53 @@ h2 {
   padding: 12px 0;
 }
 
+/* Reputation */
+.rank-medal {
+  font-size: 18px;
+  min-width: 36px;
+  text-align: center;
+}
+.rep-citizen {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+.rep-total {
+  font-weight: 600;
+  color: #d5ff5f;
+}
+.rep-breakdown {
+  display: flex;
+  gap: 12px;
+}
+.rep-breakdown small {
+  font-size: 12px;
+  color: rgba(244,241,232,0.6);
+}
+.rep-updated {
+  font-size: 11px;
+  color: rgba(244,241,232,0.4);
+  text-align: right;
+}
+.rep-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rep-rule {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(244,241,232,0.04);
+}
+.rep-rule strong {
+  color: #d5ff5f;
+}
+.rep-rule span {
+  font-size: 12px;
+  color: rgba(244,241,232,0.6);
+}
+
 @keyframes rise {
   from {
     transform: translateY(80px);
