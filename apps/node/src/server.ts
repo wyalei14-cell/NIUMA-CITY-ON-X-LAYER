@@ -42,6 +42,14 @@ app.get("/api/world/latest", (_req, res) => {
   res.json(currentWorld().manifest);
 });
 
+app.get("/api/academy", (_req, res) => {
+  const world = currentWorld();
+  res.json({
+    courses: Object.values(world.state.academy.courses).sort((a, b) => a.courseId - b.courseId),
+    credentials: Object.values(world.state.academy.credentials).sort((a, b) => a.credentialId - b.credentialId)
+  });
+});
+
 app.get("/api/world/versions", (_req, res) => {
   res.json([currentWorld().manifest]);
 });

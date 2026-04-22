@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileArchive,
   GitPullRequest,
+  GraduationCap,
   Landmark,
   Network,
   Radio,
@@ -23,6 +24,8 @@ import {
   XLAYER_TESTNET,
   citizenRegistryAbi,
   companyRegistryAbi,
+  courseRegistryAbi,
+  credentialRegistryAbi,
   electionManagerAbi,
   governanceCoreAbi,
   switchToXLayer,
@@ -30,7 +33,7 @@ import {
 } from "@niuma/sdk";
 import "./styles.css";
 
-type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "archive";
+type View = "plaza" | "join" | "city-hall" | "dev-center" | "company" | "academy" | "archive";
 type Proposal = {
   proposalId: number;
   title: string;
@@ -72,7 +75,9 @@ const addresses = {
   governance: import.meta.env.VITE_GOVERNANCE_CORE || "",
   company: import.meta.env.VITE_COMPANY_REGISTRY || "",
   world: import.meta.env.VITE_WORLD_STATE_REGISTRY || "",
-  election: import.meta.env.VITE_ELECTION_MANAGER || ""
+  election: import.meta.env.VITE_ELECTION_MANAGER || "",
+  course: import.meta.env.VITE_COURSE_REGISTRY || "",
+  credential: import.meta.env.VITE_CREDENTIAL_REGISTRY || ""
 };
 
 function App() {
@@ -85,6 +90,8 @@ function App() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
+  const [academyCourses, setAcademyCourses] = useState<Array<{courseId:number;proposer:string;title:string;contentHash:string;difficulty:number;status:string;completionCount:number}>>([]);
+  const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -101,22 +108,26 @@ function App() {
     ["city-hall", "City Hall", Landmark],
     ["dev-center", "Dev Center", GitPullRequest],
     ["company", "Company District", Building2],
+    ["academy", "Academy", GraduationCap],
     ["archive", "Archive", FileArchive]
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes] = await Promise.all([
+    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
-      fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null)
+      fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null),
+      fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] }))
     ]);
     setProposals(proposalRes);
     setCompanies(companyRes);
     setManifest(worldRes);
     setMayor(mayorRes);
     setBootstrap(bootstrapRes);
+    setAcademyCourses(academyRes.courses || []);
+    setAcademyCredentials(academyRes.credentials || []);
   }
 
   async function connectWallet() {
@@ -138,7 +149,7 @@ function App() {
     setNotice("Wallet connected.");
   }
 
-  async function runTx(kind: "register" | "proposal" | "vote" | "company" | "nominate" | "world") {
+  async function runTx(kind: "register" | "proposal" | "vote" | "company" | "nominate" | "world" | "course") {
     if (!wallet) await connectWallet();
     const provider = new BrowserProvider((window as unknown as { ethereum: Eip1193Provider }).ethereum);
     const signer = await provider.getSigner();
@@ -179,6 +190,12 @@ function App() {
         const latest = await contract.latestWorldVersion();
         const tx = await contract.submitWorldVersion(Number(latest) + 1, manifest?.stateRoot || "sha256:pending", "local://manifest");
         setNotice(`World version publish sent: ${tx.hash}`);
+      }
+      if (kind === "course") {
+        assertAddress(addresses.course, "CourseRegistry");
+        const contract = new Contract(addresses.course, courseRegistryAbi, signer);
+        const tx = await contract.proposeCourse("New Course", `ipfs://course/${Date.now()}`, 0);
+        setNotice(`Course proposal sent: ${tx.hash}`);
       }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Transaction failed.");
@@ -376,6 +393,46 @@ function App() {
           </section>
         )}
 
+        {view === "academy" && (
+          <section className="operations">
+            <ActionPanel
+              icon={<GraduationCap />}
+              title="Academy District"
+              meta={`${academyCourses.length} courses · ${academyCredentials.length} credentials`}
+              actions={[["Propose Course", () => runTx("course")]]}
+            />
+            <div className="academy-section">
+              <h3>Courses</h3>
+              {academyCourses.length === 0 && <p className="empty">No courses yet. Be the first to propose one!</p>}
+              <div className="table">
+                {academyCourses.map((course) => (
+                  <div className="table-row" key={course.courseId}>
+                    <span className="course-id">C-{String(course.courseId).padStart(3,"0")}</span>
+                    <strong>{course.title}</strong>
+                    <span className={`difficulty d${course.difficulty}`}>{["Beginner","Intermediate","Advanced"][course.difficulty] || `Lvl ${course.difficulty}`}</span>
+                    <span className={`course-status ${course.status.toLowerCase()}`}>{course.status}</span>
+                    <span>{course.completionCount} completions</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="academy-section">
+              <h3>Credentials</h3>
+              {academyCredentials.length === 0 && <p className="empty">No credentials issued yet.</p>}
+              <div className="table">
+                {academyCredentials.map((cred) => (
+                  <div className="table-row" key={cred.credentialId}>
+                    <span className="cred-id">CR-{String(cred.credentialId).padStart(3,"0")}</span>
+                    <span>Citizen {short(cred.citizen)}</span>
+                    <span>Course C-{String(cred.courseId).padStart(3,"0")}</span>
+                    <span className="evidence">{shortHash(cred.evidenceHash)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {view === "archive" && (
           <section className="archive">
             <div>
@@ -460,6 +517,7 @@ function viewTitle(view: View) {
     "city-hall": "City Hall",
     "dev-center": "Dev Center",
     company: "Company District",
+    academy: "Academy",
     archive: "Archive"
   }[view];
 }
