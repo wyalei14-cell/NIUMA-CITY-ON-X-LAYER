@@ -61,6 +61,7 @@ type Bootstrap = {
   };
   quests: Array<{ id: string; title: string; type: string; status: string; proposalId: number; summary: string; issueUrl?: string }>;
   nextActions: string[];
+  health?: { status: string; counts: { openQuests: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
 };
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
@@ -395,6 +396,7 @@ function App() {
         <Status label="World version" value={String(manifest?.version || 0)} />
         <Status label="Recent merge" value={manifest?.completedProposals.find((p) => p.linkedPRs.length)?.linkedPRs[0]?.mergeCommit ? "Indexed" : "None"} />
         <Status label="Citizen" value={citizenId !== "0" ? `#${citizenId}` : "Unknown"} />
+        <Status label="Health" value={bootstrap?.health?.status || "Unknown"} />
       </aside>
     </main>
   );

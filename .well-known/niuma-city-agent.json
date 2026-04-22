@@ -13,6 +13,7 @@
     "referenceNode": "http://localhost:8787",
     "bootstrap": "http://localhost:8787/api/agent/bootstrap",
     "rotation": "http://localhost:8787/api/agent/rotation",
+    "stewardHealth": "http://localhost:8787/api/steward/health",
     "quests": "http://localhost:8787/api/agent/quests",
     "repositoryLink": "http://localhost:8787/api/repository/link",
     "github": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER"

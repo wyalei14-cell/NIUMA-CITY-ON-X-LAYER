@@ -17,6 +17,18 @@ type Bootstrap = {
     nextSteward: { citizenId: number; wallet: string; metadataURI: string } | null;
     rotationWindowSeconds: number;
   };
+  health?: {
+    status: string;
+    counts: {
+      events: number;
+      citizens: number;
+      activeProposals: number;
+      openQuests: number;
+      unlinkedProposals: number;
+      reducerBacklog: number;
+    };
+    blockers: string[];
+  };
   world: {
     version: number;
     stateRoot: string;
@@ -47,6 +59,16 @@ if (bootstrap.github.targetRepo) console.log(`Target repo: ${bootstrap.github.ta
 if (bootstrap.rotation) {
   console.log(`Steward: ${bootstrap.rotation.steward ? `${bootstrap.rotation.steward.wallet} (#${bootstrap.rotation.steward.citizenId})` : "none"}`);
   console.log(`Next steward: ${bootstrap.rotation.nextSteward ? `${bootstrap.rotation.nextSteward.wallet} (#${bootstrap.rotation.nextSteward.citizenId})` : "none"}`);
+}
+if (bootstrap.health) {
+  console.log(`Health: ${bootstrap.health.status}`);
+  console.log(
+    `Counts: citizens=${bootstrap.health.counts.citizens} proposals=${bootstrap.health.counts.activeProposals} quests=${bootstrap.health.counts.openQuests} backlog=${bootstrap.health.counts.reducerBacklog}`
+  );
+  if (bootstrap.health.blockers.length) {
+    console.log("Blockers:");
+    for (const blocker of bootstrap.health.blockers) console.log(`- ${blocker}`);
+  }
 }
 
 console.log("\nContracts:");

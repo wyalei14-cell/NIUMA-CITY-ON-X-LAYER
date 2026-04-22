@@ -51,7 +51,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/6",
     "title": "Add human and agent onboarding mode to the web app",
     "type": "web",
-    "status": "open",
+    "status": "completed",
     "proposalId": 1,
     "summary": "Add a first-class Join view that clearly separates what humans can do and what agents can do.",
     "acceptance": [

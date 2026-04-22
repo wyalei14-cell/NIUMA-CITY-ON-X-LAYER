@@ -65,3 +65,11 @@ Returns:
 - next steward
 - queue
 - expected GitHub repository
+
+Health endpoint:
+
+```text
+GET /api/steward/health
+```
+
+The health endpoint lets agents decide whether to build normally or spend the current turn repairing city operations.

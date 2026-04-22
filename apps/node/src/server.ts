@@ -1,13 +1,15 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { WebSocketServer } from "ws";
 import { addEvent, currentWorld, events } from "./store.js";
 import { createProposalIssue, verifyGithubSignature } from "./github.js";
-import { syncChainEvents } from "./chain.js";
+import { getChainSyncStatus, syncChainEvents } from "./chain.js";
 import { WorldEvent } from "@niuma/reducer";
 import fs from "node:fs";
 import path from "node:path";
+import dotenv from "dotenv";
+
+loadEnvironment();
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -58,6 +60,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
   const repository = repositoryLink();
   const rotation = currentRotation(world.state.citizens);
   const quests = readQuests();
+  const health = stewardHealthSnapshot(world, rotation, quests);
   res.json({
     city: "NIUMA CITY",
     mission:
@@ -81,6 +84,7 @@ app.get("/api/agent/bootstrap", (_req, res) => {
     },
     mayor: world.state.mayor || null,
     rotation,
+    health,
     activeProposals: Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected"),
     companies: Object.values(world.state.companies),
     requiredReading: [
@@ -126,6 +130,22 @@ app.get("/api/agent/quests", (_req, res) => {
     repository: repositoryLink(),
     quests: readQuests()
   });
+});
+
+app.get("/api/steward/health", async (_req, res) => {
+  try {
+    const world = currentWorld();
+    const quests = readQuests();
+    const rotation = currentRotation(world.state.citizens);
+    const health = stewardHealthSnapshot(world, rotation, quests);
+    const github = await githubHealth(repositoryLink());
+    res.json({
+      ...health,
+      github
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "steward health failed" });
+  }
 });
 
 app.get("/api/repository/link", (_req, res) => {
@@ -309,4 +329,107 @@ function currentRotation(citizens: Record<string, { citizenId: number; wallet: s
     queue,
     rule: "steward = citizens[floor(unixTime / rotationWindowSeconds) % citizens.length]"
   };
+}
+
+function stewardHealthSnapshot(
+  world: ReturnType<typeof currentWorld>,
+  rotation: ReturnType<typeof currentRotation>,
+  quests: ReturnType<typeof readQuests>
+) {
+  const activeProposals = Object.values(world.state.proposals).filter((proposal) => proposal.status !== "Executed" && proposal.status !== "Rejected");
+  const unlinkedProposals = Object.values(world.state.proposals).filter(
+    (proposal) => ["Passed", "Executed"].includes(proposal.status) && !proposal.issueNumber
+  );
+  const openQuests = quests.filter((quest) => quest.status === "open");
+  const reducerBacklog = Object.values(world.state.proposals).filter(
+    (proposal) => proposal.status === "Executed" && proposal.linkedPRs.length > 0
+  ).length;
+  const chainSync = getChainSyncStatus();
+  const blockers = [
+    rotation.steward ? null : "No registered citizen steward is available.",
+    chainSync?.ok === false ? `Chain sync failed: ${chainSync.reason || chainSync.error || "unknown reason"}` : null,
+    openQuests.length === 0 ? "No open quests are available for agents." : null
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length ? "needs_attention" : "healthy",
+    steward: rotation.steward,
+    nextSteward: rotation.nextSteward,
+    chainSync,
+    counts: {
+      events: events.length,
+      citizens: Object.keys(world.state.citizens).length,
+      activeProposals: activeProposals.length,
+      openQuests: openQuests.length,
+      unlinkedProposals: unlinkedProposals.length,
+      reducerBacklog
+    },
+    unlinkedProposals: unlinkedProposals.map((proposal) => ({
+      proposalId: proposal.proposalId,
+      title: proposal.title,
+      status: proposal.status
+    })),
+    openQuests: openQuests.map((quest) => ({
+      id: quest.id,
+      issueNumber: quest.issueNumber,
+      issueUrl: quest.issueUrl,
+      title: quest.title,
+      type: quest.type
+    })),
+    blockers
+  };
+}
+
+async function githubHealth(repository: ReturnType<typeof repositoryLink>) {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    return {
+      status: "token_missing",
+      openPullRequests: null,
+      stalePullRequests: null
+    };
+  }
+  const [owner, repo] = repository.activeRepo.split("/");
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=50`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": "NIUMA-CITY-reference-node"
+    }
+  });
+  if (!response.ok) {
+    return {
+      status: "github_unavailable",
+      error: `${response.status} ${response.statusText}`,
+      openPullRequests: null,
+      stalePullRequests: null
+    };
+  }
+  const pulls = (await response.json()) as Array<{ number: number; title: string; html_url: string; updated_at: string }>;
+  const staleMs = Number(process.env.STEWARD_STALE_PR_HOURS || 24) * 60 * 60 * 1000;
+  const now = Date.now();
+  const stalePullRequests = pulls
+    .filter((pull) => now - new Date(pull.updated_at).getTime() > staleMs)
+    .map((pull) => ({
+      number: pull.number,
+      title: pull.title,
+      url: pull.html_url,
+      updatedAt: pull.updated_at
+    }));
+  return {
+    status: "ok",
+    openPullRequests: pulls.length,
+    stalePullRequests
+  };
+}
+
+function loadEnvironment() {
+  const candidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(process.cwd(), "..", "..", ".env")
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      dotenv.config({ path: candidate, override: false });
+    }
+  }
 }

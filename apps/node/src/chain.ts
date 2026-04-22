@@ -37,41 +37,70 @@ type Deployment = {
   contracts: Record<string, string>;
 };
 
+type ChainSyncStatus = {
+  ok: boolean;
+  fromBlock?: number;
+  latest?: number;
+  added?: number;
+  syncedAt: number;
+  reason?: string;
+  error?: string;
+};
+
+let lastChainSync: ChainSyncStatus | null = null;
+
 export async function syncChainEvents() {
   const deployment = loadDeployment();
-  if (!deployment) return { ok: false, reason: "deployment not found" };
+  if (!deployment) {
+    lastChainSync = { ok: false, reason: "deployment not found", syncedAt: Math.floor(Date.now() / 1000) };
+    return lastChainSync;
+  }
 
-  const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
-  const provider = new JsonRpcProvider(rpcUrl);
-  const latest = await provider.getBlockNumber();
-  const fromBlock = Number(process.env.CHAIN_START_BLOCK || Math.max(0, latest - 250000));
+  try {
+    const rpcUrl = process.env.XLAYER_TESTNET_RPC || "https://testrpc.xlayer.tech/terigon";
+    const provider = new JsonRpcProvider(rpcUrl);
+    const latest = await provider.getBlockNumber();
+    const fromBlock = Number(process.env.CHAIN_START_BLOCK || Math.max(0, latest - 1000));
 
-  const contracts = [
-    { name: "CitizenRegistry", address: deployment.contracts.CitizenRegistry, abi: citizenAbi, mapper: mapCitizenEvent },
-    { name: "GovernanceCore", address: deployment.contracts.GovernanceCore, abi: governanceAbi, mapper: mapGovernanceEvent },
-    { name: "CompanyRegistry", address: deployment.contracts.CompanyRegistry, abi: companyAbi, mapper: mapCompanyEvent },
-    { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent }
-  ];
+    const contracts = [
+      { name: "CitizenRegistry", address: deployment.contracts.CitizenRegistry, abi: citizenAbi, mapper: mapCitizenEvent },
+      { name: "GovernanceCore", address: deployment.contracts.GovernanceCore, abi: governanceAbi, mapper: mapGovernanceEvent },
+      { name: "CompanyRegistry", address: deployment.contracts.CompanyRegistry, abi: companyAbi, mapper: mapCompanyEvent },
+      { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent }
+    ];
 
-  let added = 0;
-  for (const item of contracts) {
-    if (!item.address) continue;
-    const contract = new Contract(item.address, item.abi, provider);
-    const chunkSize = Number(process.env.CHAIN_LOG_CHUNK_SIZE || 95);
-    for (let start = fromBlock; start <= latest; start += chunkSize) {
-      const end = Math.min(latest, start + chunkSize - 1);
-      const logs = await contract.queryFilter("*", start, end);
-      for (const log of logs) {
-        const mapped = item.mapper(log);
-        if (mapped && !hasEvent(mapped.id)) {
-          addEvent(mapped);
-          added += 1;
+    let added = 0;
+    for (const item of contracts) {
+      if (!item.address) continue;
+      const contract = new Contract(item.address, item.abi, provider);
+      const chunkSize = Number(process.env.CHAIN_LOG_CHUNK_SIZE || 95);
+      for (let start = fromBlock; start <= latest; start += chunkSize) {
+        const end = Math.min(latest, start + chunkSize - 1);
+        const logs = await contract.queryFilter("*", start, end);
+        for (const log of logs) {
+          const mapped = item.mapper(log);
+          if (mapped && !hasEvent(mapped.id)) {
+            addEvent(mapped);
+            added += 1;
+          }
         }
       }
     }
-  }
 
-  return { ok: true, fromBlock, latest, added };
+    lastChainSync = { ok: true, fromBlock, latest, added, syncedAt: Math.floor(Date.now() / 1000) };
+    return lastChainSync;
+  } catch (error) {
+    lastChainSync = {
+      ok: false,
+      error: error instanceof Error ? error.message : "unknown chain sync error",
+      syncedAt: Math.floor(Date.now() / 1000)
+    };
+    throw error;
+  }
+}
+
+export function getChainSyncStatus() {
+  return lastChainSync;
 }
 
 function mapCitizenEvent(log: any): WorldEvent | undefined {

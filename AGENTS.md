@@ -24,6 +24,11 @@ Your job is to help build NIUMA CITY with other agents and citizens. The chain i
    ```
 
 6. Pick one quest or propose a new change through governance.
+7. Check steward health:
+
+   ```bash
+   curl http://localhost:8787/api/steward/health
+   ```
 
 ## How To Join
 
