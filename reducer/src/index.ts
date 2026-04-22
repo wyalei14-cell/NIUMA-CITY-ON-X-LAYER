@@ -12,6 +12,11 @@ export type WorldEvent =
   | { id: string; source: "chain"; type: "CompanyJoined"; blockNumber: number; logIndex: number; payload: { companyId: number; member: string } }
   | { id: string; source: "chain"; type: "CompanyLeft"; blockNumber: number; logIndex: number; payload: { companyId: number; member: string } }
   | { id: string; source: "chain"; type: "MayorAssigned"; blockNumber: number; logIndex: number; payload: { mayor: string; startAt: number; endAt: number } }
+  | { id: string; source: "chain"; type: "CourseProposed"; blockNumber: number; logIndex: number; payload: { courseId: number; proposer: string; title: string; contentHash: string; difficulty: number } }
+  | { id: string; source: "chain"; type: "CourseActivated"; blockNumber: number; logIndex: number; payload: { courseId: number } }
+  | { id: string; source: "chain"; type: "CourseDeprecated"; blockNumber: number; logIndex: number; payload: { courseId: number } }
+  | { id: string; source: "chain"; type: "CourseCompleted"; blockNumber: number; logIndex: number; payload: { courseId: number; citizen: string } }
+  | { id: string; source: "chain"; type: "CredentialIssued"; blockNumber: number; logIndex: number; payload: { credentialId: number; citizen: string; courseId: number; evidenceHash: string } }
   | { id: string; source: "github"; type: "IssueLinked"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; issueNumber: number; issueUrl: string } }
   | { id: string; source: "github"; type: "PullRequestMerged"; blockNumber?: number; logIndex?: number; payload: { proposalId: number; prNumber: number; mergeCommit: string; url: string } };
 
@@ -33,6 +38,10 @@ export interface WorldState {
   }>;
   companies: Record<string, { companyId: number; owner: string; name: string; metadataURI: string; members: string[] }>;
   mayor?: { wallet: string; startAt: number; endAt: number };
+  academy: {
+    courses: Record<string, { courseId: number; proposer: string; title: string; contentHash: string; difficulty: number; status: string; completionCount: number }>;
+    credentials: Record<string, { credentialId: number; citizen: string; courseId: number; evidenceHash: string; issuedAt: number }>;
+  };
   archive: WorldEvent[];
 }
 
@@ -48,6 +57,7 @@ export interface WorldManifest {
   completedProposals: Array<WorldState["proposals"][string]>;
   citizenIndexRoot: string;
   socialGraphRoot: string;
+  academyRoot: string;
   githubSync: {
     repo: string;
     commit: string;
@@ -55,7 +65,7 @@ export interface WorldManifest {
 }
 
 export function reduceEvents(events: WorldEvent[]): WorldState {
-  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, archive: [] };
+  const state: WorldState = { citizens: {}, proposals: {}, companies: {}, academy: { courses: {}, credentials: {} }, archive: [] };
   for (const event of sortEvents(events)) {
     state.archive.push(event);
     switch (event.type) {
@@ -133,6 +143,41 @@ export function reduceEvents(events: WorldEvent[]): WorldState {
       case "MayorAssigned":
         state.mayor = { wallet: event.payload.mayor, startAt: event.payload.startAt, endAt: event.payload.endAt };
         break;
+      case "CourseProposed":
+        state.academy.courses[String(event.payload.courseId)] = {
+          courseId: event.payload.courseId,
+          proposer: event.payload.proposer,
+          title: event.payload.title,
+          contentHash: event.payload.contentHash,
+          difficulty: event.payload.difficulty,
+          status: "Draft",
+          completionCount: 0
+        };
+        break;
+      case "CourseActivated": {
+        const course = state.academy.courses[String(event.payload.courseId)];
+        if (course) course.status = "Active";
+        break;
+      }
+      case "CourseDeprecated": {
+        const deprecated = state.academy.courses[String(event.payload.courseId)];
+        if (deprecated) deprecated.status = "Deprecated";
+        break;
+      }
+      case "CourseCompleted": {
+        const completed = state.academy.courses[String(event.payload.courseId)];
+        if (completed) completed.completionCount++;
+        break;
+      }
+      case "CredentialIssued":
+        state.academy.credentials[String(event.payload.credentialId)] = {
+          credentialId: event.payload.credentialId,
+          citizen: event.payload.citizen,
+          courseId: event.payload.courseId,
+          evidenceHash: event.payload.evidenceHash,
+          issuedAt: event.blockNumber
+        };
+        break;
       case "IssueLinked": {
         const proposal = state.proposals[String(event.payload.proposalId)];
         if (proposal) {
@@ -165,17 +210,22 @@ export function buildManifest(input: {
   const completedProposals = proposals.filter((proposal) => ["Passed", "Rejected", "Executed"].includes(proposal.status));
   const citizenIndexRoot = hashCanonical(Object.values(input.state.citizens).sort((a, b) => a.citizenId - b.citizenId));
   const socialGraphRoot = hashCanonical(companies.map((company) => ({ companyId: company.companyId, members: [...company.members].sort() })));
+  const academyRoot = hashCanonical({
+    courses: Object.values(input.state.academy.courses).sort((a, b) => a.courseId - b.courseId),
+    credentials: Object.values(input.state.academy.credentials).sort((a, b) => a.credentialId - b.credentialId)
+  });
   const manifestWithoutRoot = {
     version: input.version,
     constitutionHash: input.constitutionHash,
     generatedAt: input.generatedAt,
-    rooms: ["plaza", "city-hall", "dev-center", "company-district", "archive"],
+    rooms: ["plaza", "city-hall", "dev-center", "company-district", "academy", "archive"],
     offices: input.state.mayor ? [{ mayor: input.state.mayor.wallet, startAt: input.state.mayor.startAt, endAt: input.state.mayor.endAt }] : [],
     companies,
     activeProposals,
     completedProposals,
     citizenIndexRoot,
     socialGraphRoot,
+    academyRoot,
     githubSync: { repo: input.githubRepo, commit: input.githubCommit }
   };
   const stateRoot = hashCanonical({ state: input.state, manifest: manifestWithoutRoot });

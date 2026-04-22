@@ -29,6 +29,17 @@ const companyAbi = [
 
 const roleAbi = ["event MayorAssigned(address indexed mayor,uint256 startAt,uint256 endAt)"];
 
+const courseAbi = [
+  "event CourseProposed(uint256 indexed courseId,address indexed proposer,string title,string contentHash,uint8 difficulty)",
+  "event CourseActivated(uint256 indexed courseId)",
+  "event CourseDeprecated(uint256 indexed courseId)",
+  "event CourseCompleted(uint256 indexed courseId,address indexed citizen)"
+];
+
+const credentialAbi = [
+  "event CredentialIssued(uint256 indexed credentialId,address indexed citizen,uint256 indexed courseId,string evidenceHash)"
+];
+
 const proposalTypes = ["Feature", "Governance", "District", "Company"];
 const proposalStatuses = ["Draft", "Discussion", "Voting", "Passed", "Rejected", "Executed"];
 
@@ -75,7 +86,9 @@ async function syncChainEventsOnce() {
       { name: "CitizenRegistry", address: deployment.contracts.CitizenRegistry, abi: citizenAbi, mapper: mapCitizenEvent },
       { name: "GovernanceCore", address: deployment.contracts.GovernanceCore, abi: governanceAbi, mapper: mapGovernanceEvent },
       { name: "CompanyRegistry", address: deployment.contracts.CompanyRegistry, abi: companyAbi, mapper: mapCompanyEvent },
-      { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent }
+      { name: "RoleManager", address: deployment.contracts.RoleManager, abi: roleAbi, mapper: mapRoleEvent },
+      { name: "CourseRegistry", address: deployment.contracts.CourseRegistry, abi: courseAbi, mapper: mapCourseEvent },
+      { name: "CredentialRegistry", address: deployment.contracts.CredentialRegistry, abi: credentialAbi, mapper: mapCredentialEvent }
     ];
 
     let added = 0;
@@ -283,6 +296,74 @@ function mapRoleEvent(log: any): WorldEvent | undefined {
   };
 }
 
+function mapCourseEvent(log: any): WorldEvent | undefined {
+  const event = log.fragment?.name;
+  if (event === "CourseProposed") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "CourseProposed",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: {
+        courseId: Number(log.args.courseId),
+        proposer: log.args.proposer,
+        title: log.args.title,
+        contentHash: log.args.contentHash,
+        difficulty: Number(log.args.difficulty)
+      }
+    };
+  }
+  if (event === "CourseActivated") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "CourseActivated",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: { courseId: Number(log.args.courseId) }
+    };
+  }
+  if (event === "CourseDeprecated") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "CourseDeprecated",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: { courseId: Number(log.args.courseId) }
+    };
+  }
+  if (event === "CourseCompleted") {
+    return {
+      id: chainEventId(log),
+      source: "chain",
+      type: "CourseCompleted",
+      blockNumber: log.blockNumber,
+      logIndex: log.index,
+      payload: { courseId: Number(log.args.courseId), citizen: log.args.citizen }
+    };
+  }
+  return undefined;
+}
+
+function mapCredentialEvent(log: any): WorldEvent | undefined {
+  if (log.fragment?.name !== "CredentialIssued") return undefined;
+  return {
+    id: chainEventId(log),
+    source: "chain",
+    type: "CredentialIssued",
+    blockNumber: log.blockNumber,
+    logIndex: log.index,
+    payload: {
+      credentialId: Number(log.args.credentialId),
+      citizen: log.args.citizen,
+      courseId: Number(log.args.courseId),
+      evidenceHash: log.args.evidenceHash
+    }
+  };
+}
+
 function chainEventId(log: any) {
   return `chain-${log.blockNumber}-${log.transactionIndex}-${log.index}-${log.transactionHash}`;
 }
@@ -295,7 +376,9 @@ function loadDeployment(): Deployment | null {
           CitizenRegistry: process.env.CITIZEN_REGISTRY,
           GovernanceCore: process.env.GOVERNANCE_CORE || "",
           RoleManager: process.env.ROLE_MANAGER || "",
-          CompanyRegistry: process.env.COMPANY_REGISTRY || ""
+          CompanyRegistry: process.env.COMPANY_REGISTRY || "",
+          CourseRegistry: process.env.COURSE_REGISTRY || "",
+          CredentialRegistry: process.env.CREDENTIAL_REGISTRY || ""
         }
       }
     : null;

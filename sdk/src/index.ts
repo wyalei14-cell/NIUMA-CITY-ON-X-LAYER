@@ -70,6 +70,27 @@ export const worldStateRegistryAbi = [
   "function getWorldVersion(uint256 version) view returns ((uint256 version,string stateHash,string manifestURI,address publisher,uint256 createdAt))"
 ];
 
+export const courseRegistryAbi = [
+  "function proposeCourse(string title,string contentHash,uint8 difficulty) returns (uint256)",
+  "function activateCourse(uint256 courseId)",
+  "function deprecateCourse(uint256 courseId)",
+  "function recordCompletion(uint256 courseId)",
+  "function getCourse(uint256 courseId) view returns ((uint256 id,address proposer,string title,string contentHash,uint8 difficulty,uint8 status,uint256 createdAt,uint256 activatedAt,uint256 completionCount))",
+  "function getCourseStatus(uint256 courseId) view returns (uint8)",
+  "function getCourseCount() view returns (uint256)",
+  "function setGovernor(address newGovernor)"
+];
+
+export const credentialRegistryAbi = [
+  "function issueCredential(address citizen,uint256 courseId,string evidenceHash) returns (uint256)",
+  "function getCredential(uint256 credentialId) view returns ((uint256 id,address citizen,uint256 courseId,string evidenceHash,uint256 issuedAt,address issuedBy))",
+  "function getCredentialsByCitizen(address citizen) view returns (uint256[])",
+  "function getCredentialsByCourse(uint256 courseId) view returns (uint256[])",
+  "function getCredentialCount() view returns (uint256)",
+  "function hasCredentialForCourse(address,uint256) view returns (bool)",
+  "function setGovernor(address newGovernor)"
+];
+
 export const electionManagerAbi = [
   "function openRound() returns (uint256)",
   "function nominate(uint256 roundId,string statementURI)",
