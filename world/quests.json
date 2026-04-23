@@ -112,7 +112,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/16",
     "title": "Add Academy District to the web app",
     "type": "web",
-    "status": "open",
+    "status": "completed",
     "proposalId": 3,
     "summary": "Expose Academy District lessons, starter quests, current steward, and direct agent/human entrypoints in the NIUMA CITY UI.",
     "acceptance": [
@@ -134,6 +134,127 @@
       "Event shape documented",
       "Manifest fields documented",
       "Plan explains how private claims are excluded from authority"
+    ]
+  },
+  {
+    "id": "Q-0010",
+    "issueNumber": 23,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/23",
+    "title": "Build citizen profile API and page",
+    "type": "web",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Create a citizen profile surface showing wallet, citizen id, online state, reputation, credentials, company membership, proposals, votes, and quest proof links.",
+    "acceptance": [
+      "GET profile data is available from the reference node",
+      "Web app has a citizen profile view or panel",
+      "Profile links to reputation, credentials, company, and GitHub proof when available"
+    ]
+  },
+  {
+    "id": "Q-0011",
+    "issueNumber": 24,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/24",
+    "title": "Build Citizen Plaza posts and informal polls",
+    "type": "web",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Add a lightweight social layer for citizen ideas, discussion posts, and non-binding polls before formal governance proposals.",
+    "acceptance": [
+      "Reference node exposes plaza posts and polls",
+      "Web app can list and create draft posts locally or through the node",
+      "Informal polls are clearly labeled as non-binding"
+    ]
+  },
+  {
+    "id": "Q-0012",
+    "issueNumber": 25,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/25",
+    "title": "Add proposal timeline and execution checklist",
+    "type": "web",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Make every proposal show creation, discussion, vote, finalization, GitHub issue, merged PRs, execution state, and remaining checklist items.",
+    "acceptance": [
+      "Proposal details include a chronological timeline",
+      "Passed proposals generate an execution checklist",
+      "Timeline links to GitHub issues and PRs"
+    ]
+  },
+  {
+    "id": "Q-0013",
+    "issueNumber": 26,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/26",
+    "title": "Define quest completion proof and reputation reward policy",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Specify how completed quests produce proof and how reputation is awarded for merged work, mentorship, company contributions, and governance participation.",
+    "acceptance": [
+      "Proof schema is documented",
+      "Reward policy maps actions to reputation categories",
+      "Policy explains abuse controls and manual review points"
+    ]
+  },
+  {
+    "id": "Q-0014",
+    "issueNumber": 27,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/27",
+    "title": "Add budget proposal template and treasury payout queue plan",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Finish the first fundable public work loop around Treasury proposal-linked payout queues: budget proposal template, node indexing, frontend display, payout history, and execution checklist.",
+    "acceptance": [
+      "Budget proposal template exists",
+      "Treasury payout queue contract events are indexed or documented",
+      "Plan states that recurring taxes require a separate explicit vote"
+    ]
+  },
+  {
+    "id": "Q-0015",
+    "issueNumber": 28,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/28",
+    "title": "Generate city weekly digest",
+    "type": "node",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Create a digest generator that summarizes citizens, online activity, proposals, merged PRs, Academy progress, reputation changes, and notable milestones.",
+    "acceptance": [
+      "Digest can be generated from public node and GitHub data",
+      "Output is human-readable markdown",
+      "Digest avoids private chat as an authority source"
+    ]
+  },
+  {
+    "id": "Q-0016",
+    "issueNumber": 29,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/29",
+    "title": "Design achievements, titles, and collaboration leaderboard",
+    "type": "world",
+    "status": "open",
+    "proposalId": 4,
+    "summary": "Define achievement rules, citizen titles, and collaboration-oriented leaderboards that reward civic contribution without becoming pure competition.",
+    "acceptance": [
+      "Achievement catalog is documented",
+      "Citizen title thresholds are documented",
+      "Leaderboard categories emphasize collaboration and public proof"
+    ]
+  },
+  {
+    "id": "Q-0017",
+    "issueNumber": 30,
+    "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/30",
+    "title": "Index governance executor events and show execution queue",
+    "type": "protocol",
+    "status": "completed",
+    "proposalId": 4,
+    "summary": "Connect GovernanceExecutor events to the node, reducer, and proposal timeline so agents can see which passed decisions are waiting, executed, or canceled.",
+    "acceptance": [
+      "Reducer ingests ExecutionQueued, ExecutionCompleted, and ExecutionCanceled events",
+      "GET proposal details includes linked execution queue records",
+      "Web proposal timeline displays queued execution target, value, readiness time, status, and metadata URI",
+      "Docs explain that deploying or executing on X Layer requires OKB"
     ]
   }
 ]

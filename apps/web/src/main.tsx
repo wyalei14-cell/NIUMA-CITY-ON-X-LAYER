@@ -48,6 +48,18 @@ type Proposal = {
   issueNumber?: number;
   issueUrl?: string;
   linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>;
+  executionQueue?: GovernanceExecution[];
+};
+type GovernanceExecution = {
+  executionId: number;
+  proposalId: number;
+  target: string;
+  value: string;
+  data: string;
+  metadataURI: string;
+  earliestExecuteAt: number;
+  status: "Queued" | "Completed" | "Canceled";
+  result?: string;
 };
 type Company = { companyId: number; name: string; owner: string; metadataURI: string; members: string[] };
 type ReputationEntry = { citizen: string; totalPoints: number; governancePoints: number; academyPoints: number; companyPoints: number; lastUpdatedAt: number };
@@ -68,8 +80,12 @@ type Bootstrap = {
   };
   quests: Array<{ id: string; title: string; type: string; status: string; proposalId: number; summary: string; issueUrl?: string }>;
   nextActions: string[];
-  health?: { status: string; counts: { openQuests: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
+  health?: { status: string; counts: { openQuests: number; onlineCitizens?: number; reducerBacklog: number; unlinkedProposals: number }; blockers: string[] };
+  presence?: OnlinePresence;
 };
+type Citizen = { citizenId: number; wallet: string; metadataURI: string };
+type OnlineCitizen = { wallet: string; citizenId: number; label: string; role: string; registered: boolean; lastSeenAt: number; expiresAt: number };
+type OnlinePresence = { count: number; ttlSeconds: number; citizens: OnlineCitizen[] };
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -89,6 +105,7 @@ function App() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [citizenId, setCitizenId] = useState<string>("0");
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [citizens, setCitizens] = useState<Citizen[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [mayor, setMayor] = useState<{ wallet: string; startAt: number; endAt: number } | null>(null);
@@ -96,6 +113,7 @@ function App() {
   const [academyCourses, setAcademyCourses] = useState<Array<{courseId:number;proposer:string;title:string;contentHash:string;difficulty:number;status:string;completionCount:number}>>([]);
   const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
   const [reputationBoard, setReputationBoard] = useState<ReputationEntry[]>([]);
+  const [presence, setPresence] = useState<OnlinePresence>({ count: 0, ttlSeconds: 120, citizens: [] });
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -104,6 +122,13 @@ function App() {
     const timer = window.setInterval(refresh, 15000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!wallet) return;
+    reportPresence(wallet, citizenId);
+    const timer = window.setInterval(() => reportPresence(wallet, citizenId), 45000);
+    return () => window.clearInterval(timer);
+  }, [wallet, citizenId]);
 
   const selectedProposal = proposals[0];
   const nav = [
@@ -118,16 +143,19 @@ function App() {
   ] as const;
 
   async function refresh() {
-    const [proposalRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes, reputationRes] = await Promise.all([
+    const [proposalRes, citizenRes, companyRes, worldRes, mayorRes, bootstrapRes, academyRes, reputationRes, presenceRes] = await Promise.all([
       fetch(`${apiBase}/api/proposals`).then((r) => r.json()).catch(() => []),
+      fetch(`${apiBase}/api/citizens`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/companies`).then((r) => r.json()).catch(() => []),
       fetch(`${apiBase}/api/world/latest`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/election/current`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/agent/bootstrap`).then((r) => r.json()).catch(() => null),
       fetch(`${apiBase}/api/academy`).then((r) => r.json()).catch(() => ({ courses: [], credentials: [] })),
-      fetch(`${apiBase}/api/reputation`).then((r) => r.json()).catch(() => ({ leaderboard: [], total: 0 }))
+      fetch(`${apiBase}/api/reputation`).then((r) => r.json()).catch(() => ({ leaderboard: [], total: 0 })),
+      fetch(`${apiBase}/api/presence/online`).then((r) => r.json()).catch(() => ({ count: 0, ttlSeconds: 120, citizens: [] }))
     ]);
     setProposals(proposalRes);
+    setCitizens(citizenRes);
     setCompanies(companyRes);
     setManifest(worldRes);
     setMayor(mayorRes);
@@ -135,6 +163,7 @@ function App() {
     setAcademyCourses(academyRes.courses || []);
     setAcademyCredentials(academyRes.credentials || []);
     setReputationBoard(reputationRes.leaderboard || []);
+    setPresence(presenceRes);
   }
 
   async function connectWallet() {
@@ -149,10 +178,13 @@ function App() {
     const account = await signer.getAddress();
     setWallet(account);
     setChainId(Number(network.chainId));
+    let nextCitizenId = "0";
     if (addresses.citizen) {
       const registry = new Contract(addresses.citizen, citizenRegistryAbi, signer);
-      setCitizenId(String(await registry.citizenOf(account)));
+      nextCitizenId = String(await registry.citizenOf(account));
+      setCitizenId(nextCitizenId);
     }
+    await reportPresence(account, nextCitizenId);
     setNotice("Wallet connected.");
   }
 
@@ -373,14 +405,17 @@ function App() {
         {view === "dev-center" && (
           <section className="dev-map">
             {proposals.map((proposal) => (
-              <div className="lane" key={proposal.proposalId}>
-                <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
-                <strong>{proposal.title}</strong>
-                <ChevronRight />
-                <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
-                <ChevronRight />
-                <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
-              </div>
+              <article className="proposal-lane" key={proposal.proposalId}>
+                <div className="lane">
+                  <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
+                  <strong>{proposal.title}</strong>
+                  <ChevronRight />
+                  <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
+                  <ChevronRight />
+                  <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
+                </div>
+                <ExecutionQueue executions={proposal.executionQueue || []} />
+              </article>
             ))}
           </section>
         )}
@@ -408,6 +443,12 @@ function App() {
               meta={`${academyCourses.length} courses · ${academyCredentials.length} credentials`}
               actions={[["Propose Course", () => runTx("course")]]}
             />
+            <div className="academy-entrypoints">
+              <a href={`${apiBase}/api/agent/bootstrap`} target="_blank" rel="noreferrer">Bootstrap</a>
+              <a href={`${apiBase}/api/agent/quests`} target="_blank" rel="noreferrer">Quests</a>
+              <a href="https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues" target="_blank" rel="noreferrer">Issues</a>
+              <a href="https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/blob/main/proposals/P-0003-academy-district.md" target="_blank" rel="noreferrer">Proposal</a>
+            </div>
             <div className="academy-section">
               <h3>Courses</h3>
               {academyCourses.length === 0 && <p className="empty">No courses yet. Be the first to propose one!</p>}
@@ -509,11 +550,24 @@ function App() {
         <Status label="Network" value={chainId ? String(chainId) : "Not connected"} />
         <Status label="Contracts" value={contractsReady ? "Configured" : "Demo mode"} />
         <Status label="Mayor" value={mayor ? short(mayor.wallet) : "None"} />
+        <Status label="Citizens" value={String(citizens.length)} />
+        <Status label="Online" value={String(presence.count)} />
         <Status label="Active proposals" value={String(manifest?.activeProposals.length || 0)} />
         <Status label="World version" value={String(manifest?.version || 0)} />
         <Status label="Recent merge" value={manifest?.completedProposals.find((p) => p.linkedPRs.length)?.linkedPRs[0]?.mergeCommit ? "Indexed" : "None"} />
         <Status label="Citizen" value={citizenId !== "0" ? `#${citizenId}` : "Unknown"} />
         <Status label="Health" value={bootstrap?.health?.status || "Unknown"} />
+        <div className="online-list">
+          <h3>Online citizens</h3>
+          {presence.citizens.length === 0 && <p>No heartbeat yet.</p>}
+          {presence.citizens.slice(0, 5).map((citizen) => (
+            <div className="online-row" key={citizen.wallet}>
+              <span />
+              <strong>{citizen.citizenId ? `#${citizen.citizenId}` : "wallet"}</strong>
+              <small>{short(citizen.wallet)}</small>
+            </div>
+          ))}
+        </div>
       </aside>
     </main>
   );
@@ -530,6 +584,26 @@ function ProposalRow({ proposal }: { proposal: Proposal }) {
         <b>{proposal.noVotes}</b> no
       </div>
     </article>
+  );
+}
+
+function ExecutionQueue({ executions }: { executions: GovernanceExecution[] }) {
+  if (!executions.length) {
+    return <div className="execution-empty">No governance execution queued.</div>;
+  }
+  return (
+    <div className="execution-list">
+      {executions.map((execution) => (
+        <div className="execution-row" key={execution.executionId}>
+          <span className={`execution-status ${execution.status.toLowerCase()}`}>{execution.status}</span>
+          <strong>EX-{String(execution.executionId).padStart(4, "0")}</strong>
+          <span>{short(execution.target)}</span>
+          <span>{execution.value === "0" ? "0 OKB" : `${execution.value} wei`}</span>
+          <span>{formatUnix(execution.earliestExecuteAt)}</span>
+          <small title={execution.metadataURI}>{shortHash(execution.metadataURI)}</small>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -577,6 +651,8 @@ function short(value: string) {
 }
 
 function shortHash(value: string) {
+  if (!value) return "";
+  if (value.length <= 24) return value;
   return `${value.slice(0, 13)}...${value.slice(-10)}`;
 }
 
@@ -587,6 +663,12 @@ function timeAgo(timestamp: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function formatUnix(value: number) {
+  if (!value) return "No time";
+  return new Date(value * 1000).toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
 }
 
 function assertAddress(address: string, name: string) {
