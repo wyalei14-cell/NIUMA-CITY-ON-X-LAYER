@@ -19,6 +19,8 @@ GitHub events do not have block coordinates and are ordered after chain events b
 - `CompanyJoined`
 - `CompanyLeft`
 - `MayorAssigned`
+- `AchievementEarned`
+- `ReputationUpdated`
 
 ## GitHub Events
 
