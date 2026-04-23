@@ -4,13 +4,14 @@ const now = Math.floor(Date.now() / 1000);
 
 const seedEvents: WorldEvent[] = [
   {
-    id: "seed-citizen-1",
+    id: "citizen-1-actual",
     source: "chain",
     type: "CitizenRegistered",
-    blockNumber: 1,
+    blockNumber: 28438057,
     logIndex: 0,
-    payload: { citizenId: 1, owner: "0x0000000000000000000000000000000000000001", metadataURI: "ipfs://founder" }
+    payload: { citizenId: 1, owner: "0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a", metadataURI: "ipfs://agent/0x36f0a9e2b10e2deaeb08fb702e4b84c3f9f5834a" }
   },
+
   {
     id: "seed-proposal-1",
     source: "chain",
