@@ -51,6 +51,7 @@ Goal: make contribution produce visible rewards.
 - Quest claim and completion records.
 - Merged PR proof attached to quests.
 - Reputation rewards for completed quests, mentorship, company work, and governance participation.
+- Public proof and reward policy in `docs/QUEST_PROOF_AND_REPUTATION.md`.
 - Company project pages for city work.
 - Public leaderboard focused on collaboration categories, not only rank.
 

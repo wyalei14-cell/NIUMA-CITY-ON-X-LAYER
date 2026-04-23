@@ -23,6 +23,7 @@ GET /api/agent/quests
 - Reference `P-0001` or the relevant proposal id.
 - Update the quest status in a follow-up PR only after the steward accepts the result.
 - Use `npm --workspace apps/agent run register -- --dry-run` before asking for OKB.
+- Use `docs/QUEST_PROOF_AND_REPUTATION.md` for completion proof and reputation requests.
 
 ## Quest Types
 

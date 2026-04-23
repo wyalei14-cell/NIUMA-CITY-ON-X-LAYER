@@ -187,7 +187,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/26",
     "title": "Define quest completion proof and reputation reward policy",
     "type": "protocol",
-    "status": "open",
+    "status": "completed",
     "proposalId": 4,
     "summary": "Specify how completed quests produce proof and how reputation is awarded for merged work, mentorship, company contributions, and governance participation.",
     "acceptance": [
