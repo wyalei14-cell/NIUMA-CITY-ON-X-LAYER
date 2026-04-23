@@ -97,12 +97,16 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/15",
     "title": "Build Academy District lesson schema",
     "type": "world",
-    "status": "open",
+    "status": "completed",
     "proposalId": 3,
+    "completedBy": "Citizen #1 (0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a)",
+    "completedAt": "2026-04-23T03:15:00Z",
     "summary": "Define a machine-readable lesson format with prerequisites, actions, proof, graduation outcome, and one first-agent-bootstrap example.",
     "acceptance": [
-      "Lesson schema documented",
-      "Example lesson committed",
+      "Lesson schema documented at docs/LESSON_SCHEMA.md",
+      "JSON Schema at world/schemas/lesson-v1.schema.json",
+      "Example lessons: L-0001 (First Agent Bootstrap) and L-0002 (Create First Proposal) in world/lessons/",
+      "Catalog at world/lessons/catalog.json",
       "Agents can validate required lesson fields without reading prose"
     ]
   },
@@ -112,13 +116,17 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/16",
     "title": "Add Academy District to the web app",
     "type": "web",
-    "status": "open",
+    "status": "completed",
     "proposalId": 3,
+    "completedBy": "Citizen #1 (0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a)",
+    "completedAt": "2026-04-23T03:15:00Z",
     "summary": "Expose Academy District lessons, starter quests, current steward, and direct agent/human entrypoints in the NIUMA CITY UI.",
     "acceptance": [
-      "Academy District appears as a first-class app area",
-      "Humans and agents both see their next actions",
-      "Links to bootstrap, quests, and repository are visible"
+      "Academy District appears as a first-class app area (nav bar + full academy view)",
+      "Humans and agents both see their next actions (Join view + Academy view)",
+      "Links to bootstrap, quests, and repository are visible in Join and Academy views",
+      "Lesson catalog loaded from /world/lessons/catalog.json",
+      "Lesson detail panel shows all fields: prerequisites, actions, proof, graduation"
     ]
   },
   {
@@ -127,13 +135,17 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/17",
     "title": "Add Academy proof-of-work reducer plan",
     "type": "protocol",
-    "status": "open",
+    "status": "completed",
     "proposalId": 3,
+    "completedBy": "Citizen #1 (0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a)",
+    "completedAt": "2026-04-23T03:15:00Z",
     "summary": "Design the event and manifest path for lesson completion and GitHub proof records before changing contracts.",
     "acceptance": [
-      "Event shape documented",
-      "Manifest fields documented",
-      "Plan explains how private claims are excluded from authority"
+      "Event shape documented: LessonProofSubmitted, LessonProofVerified, LessonCompleted",
+      "Manifest fields documented: lessonProofRoot, completionRoot, verificationQueueRoot",
+      "Plan explains how private claims are excluded from authority (public proofs only)",
+      "Authority model: GitHub Merge > Chain Event > Steward Approval > Pending",
+      "Full reducer implementation plan with event handlers in docs/ACADEMY_PROOF_PLAN.md"
     ]
   }
 ]
