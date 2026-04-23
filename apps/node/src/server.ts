@@ -74,6 +74,52 @@ app.get("/api/proposals/:id", (req, res) => {
   res.json(currentWorld().state.proposals[req.params.id] || null);
 });
 
+app.get("/api/proposals/:id/timeline", (req, res) => {
+  const proposalId = String(req.params.id);
+  const world = currentWorld();
+  const proposal = world.state.proposals[proposalId];
+  if (!proposal) { res.status(404).json({ error: "proposal not found" }); return; }
+
+  const timelineEntries = world.state.archive
+    .filter((event) => {
+      if (event.type === "ProposalCreated" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ProposalDiscussionStarted" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ProposalVotingStarted" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "VoteCast" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ProposalFinalized" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ProposalExecuted" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "IssueLinked" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "PullRequestMerged" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ExecutionQueued" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ExecutionCompleted" && String(event.payload.proposalId) === proposalId) return true;
+      if (event.type === "ExecutionCanceled" && String(event.payload.proposalId) === proposalId) return true;
+      return false;
+    })
+    .sort((a, b) => (a.blockNumber ?? 0) - (b.blockNumber ?? 0));
+
+  const timeline = timelineEntries.map((event) => ({
+    id: event.id,
+    type: event.type,
+    source: event.source,
+    blockNumber: event.blockNumber ?? null,
+    timestamp: event.blockNumber ?? null,
+    payload: event.payload,
+    phase: proposalPhase(event.type)
+  }));
+
+  res.json({ proposalId: Number(proposalId), proposal, timeline });
+});
+
+app.get("/api/proposals/:id/checklist", (req, res) => {
+  const proposalId = String(req.params.id);
+  const world = currentWorld();
+  const proposal = world.state.proposals[proposalId];
+  if (!proposal) { res.status(404).json({ error: "proposal not found" }); return; }
+
+  const checklist = buildExecutionChecklist(proposal, world.state.archive);
+  res.json({ proposalId: Number(proposalId), status: proposal.status, checklist });
+});
+
 app.get("/api/companies", (_req, res) => {
   res.json(Object.values(currentWorld().state.companies));
 });
@@ -633,6 +679,67 @@ async function githubHealth(repository: ReturnType<typeof repositoryLink>) {
     openPullRequests: pulls.length,
     stalePullRequests
   };
+}
+
+function proposalPhase(eventType: string): string {
+  const phaseMap: Record<string, string> = {
+    ProposalCreated: "creation",
+    ProposalDiscussionStarted: "discussion",
+    ProposalVotingStarted: "voting",
+    VoteCast: "voting",
+    ProposalFinalized: "finalization",
+    ProposalExecuted: "execution",
+    IssueLinked: "implementation",
+    PullRequestMerged: "implementation",
+    ExecutionQueued: "execution",
+    ExecutionCompleted: "execution",
+    ExecutionCanceled: "execution"
+  };
+  return phaseMap[eventType] || "unknown";
+}
+
+type ChecklistItem = {
+  id: string;
+  label: string;
+  completed: boolean;
+  detail?: string;
+  link?: string;
+};
+
+function buildExecutionChecklist(
+  proposal: { proposalId: number; status: string; issueNumber?: number; issueUrl?: string; linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }>; executionQueue: Array<{ executionId: number; target: string; value: string; data: string; metadataURI: string; earliestExecuteAt: number; status: string; result?: string }> },
+  archive: WorldEvent[]
+): ChecklistItem[] {
+  const pid = String(proposal.proposalId);
+  const items: ChecklistItem[] = [];
+
+  const hasDiscussion = archive.some((e) => e.type === "ProposalDiscussionStarted" && String(e.payload.proposalId) === pid);
+  const hasVoting = archive.some((e) => e.type === "ProposalVotingStarted" && String(e.payload.proposalId) === pid);
+  const hasFinalized = archive.some((e) => e.type === "ProposalFinalized" && String(e.payload.proposalId) === pid);
+  const hasExecuted = archive.some((e) => e.type === "ProposalExecuted" && String(e.payload.proposalId) === pid);
+  const voteCount = archive.filter((e) => e.type === "VoteCast" && String(e.payload.proposalId) === pid).length;
+
+  items.push({ id: "create", label: "Proposal created on-chain", completed: true, detail: `by ${proposal.issueNumber ? "proposer" : "unknown"}` });
+  items.push({ id: "discuss", label: "Discussion phase started", completed: hasDiscussion });
+  items.push({ id: "vote-start", label: "Voting started", completed: hasVoting });
+  items.push({ id: "vote-count", label: `Votes cast (${voteCount} votes recorded)`, completed: voteCount > 0 });
+  items.push({ id: "finalize", label: "Proposal finalized", completed: hasFinalized, detail: proposal.status === "Rejected" ? "Rejected by voters" : undefined });
+  items.push({ id: "issue", label: "GitHub issue linked", completed: !!proposal.issueNumber, link: proposal.issueUrl });
+  items.push({ id: "pr", label: `Pull requests merged (${proposal.linkedPRs.length})`, completed: proposal.linkedPRs.length > 0, link: proposal.linkedPRs[0]?.url });
+
+  for (const execution of proposal.executionQueue) {
+    items.push({
+      id: `exec-${execution.executionId}`,
+      label: `Execution EX-${String(execution.executionId).padStart(4, "0")}`,
+      completed: execution.status === "Completed",
+      detail: execution.status === "Queued" ? `Queued, executable after ${new Date(execution.earliestExecuteAt * 1000).toISOString()}` : execution.status,
+      link: execution.metadataURI
+    });
+  }
+
+  items.push({ id: "executed", label: "Marked executed on-chain", completed: hasExecuted });
+
+  return items;
 }
 
 function loadEnvironment() {

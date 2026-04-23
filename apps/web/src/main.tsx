@@ -4,8 +4,11 @@ import { BrowserProvider, Contract, Eip1193Provider } from "ethers";
 import {
   Building2,
   CheckCircle2,
+  CheckSquare,
+  ChevronDown,
   ChevronRight,
   ClipboardList,
+  Clock,
   FileArchive,
   GitPullRequest,
   GraduationCap,
@@ -93,6 +96,22 @@ type CitizenProfile = {
   votes: Array<{ proposalId: number; citizenId: number; support: boolean; blockNumber: number }>;
   proofLinks: { githubIssues: string[]; githubPullRequests: string[]; credentials: string[] };
 };
+type ProposalTimelineEntry = {
+  id: string;
+  type: string;
+  source: string;
+  blockNumber: number | null;
+  timestamp: number | null;
+  payload: Record<string, unknown>;
+  phase: string;
+};
+type ProposalChecklistItem = {
+  id: string;
+  label: string;
+  completed: boolean;
+  detail?: string;
+  link?: string;
+};
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -121,6 +140,9 @@ function App() {
   const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
   const [presence, setPresence] = useState<OnlinePresence>({ count: 0, ttlSeconds: 120, citizens: [] });
   const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<number | null>(null);
+  const [proposalTimeline, setProposalTimeline] = useState<ProposalTimelineEntry[]>([]);
+  const [proposalChecklist, setProposalChecklist] = useState<ProposalChecklistItem[]>([]);
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -175,6 +197,16 @@ function App() {
   async function fetchCitizenProfile(account: string) {
     const profile = await fetch(`${apiBase}/api/citizens/${account}/profile`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     setCitizenProfile(profile);
+  }
+
+  async function fetchProposalDetail(proposalId: number) {
+    setSelectedProposalId(proposalId);
+    const [timelineRes, checklistRes] = await Promise.all([
+      fetch(`${apiBase}/api/proposals/${proposalId}/timeline`).then((r) => (r.ok ? r.json() : { timeline: [] })).catch(() => ({ timeline: [] })),
+      fetch(`${apiBase}/api/proposals/${proposalId}/checklist`).then((r) => (r.ok ? r.json() : { checklist: [] })).catch(() => ({ checklist: [] }))
+    ]);
+    setProposalTimeline(timelineRes.timeline || []);
+    setProposalChecklist(checklistRes.checklist || []);
   }
 
   async function reportPresence(account = wallet, currentCitizenId = citizenId) {
@@ -433,16 +465,37 @@ function App() {
         {view === "dev-center" && (
           <section className="dev-map">
             {proposals.map((proposal) => (
-              <article className="proposal-lane" key={proposal.proposalId}>
-                <div className="lane">
+              <article className={`proposal-lane ${selectedProposalId === proposal.proposalId ? "expanded" : ""}`} key={proposal.proposalId}>
+                <div className="lane" onClick={() => setSelectedProposalId(selectedProposalId === proposal.proposalId ? null : proposal.proposalId)}>
+                  {selectedProposalId === proposal.proposalId ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   <span>P-{String(proposal.proposalId).padStart(4, "0")}</span>
                   <strong>{proposal.title}</strong>
+                  <span className={`proposal-badge ${proposal.status.toLowerCase()}`}>{proposal.status}</span>
                   <ChevronRight />
-                  <span>{proposal.issueNumber ? `Issue #${proposal.issueNumber}` : "No issue yet"}</span>
+                  <span>{proposal.issueNumber ? <a href={proposal.issueUrl} target="_blank" rel="noreferrer">Issue #{proposal.issueNumber}</a> : "No issue yet"}</span>
                   <ChevronRight />
                   <span>{proposal.linkedPRs.length ? `${proposal.linkedPRs.length} merged PR` : "Awaiting PR"}</span>
+                  <b>{proposal.yesVotes}y</b>
+                  <b>{proposal.noVotes}n</b>
                 </div>
-                <ExecutionQueue executions={proposal.executionQueue || []} />
+                {selectedProposalId === proposal.proposalId && (
+                  <div className="proposal-detail">
+                    <button className="timeline-load" onClick={() => fetchProposalDetail(proposal.proposalId)}>Load timeline & checklist</button>
+                    {proposalTimeline.length > 0 && (
+                      <div className="proposal-panels">
+                        <div className="panel-timeline">
+                          <h3><Clock size={16} /> Timeline ({proposalTimeline.length} events)</h3>
+                          <ProposalTimeline entries={proposalTimeline} />
+                        </div>
+                        <div className="panel-checklist">
+                          <h3><CheckSquare size={16} /> Checklist ({proposalChecklist.filter((c) => c.completed).length}/{proposalChecklist.length})</h3>
+                          <ProposalChecklist items={proposalChecklist} />
+                        </div>
+                      </div>
+                    )}
+                    <ExecutionQueue executions={proposal.executionQueue || []} />
+                  </div>
+                )}
               </article>
             ))}
           </section>
@@ -699,6 +752,100 @@ function formatUnix(value: number) {
 
 function assertAddress(address: string, name: string) {
   if (!address) throw new Error(`${name} address is not configured. Deploy contracts and set VITE_* env variables.`);
+}
+
+function ProposalTimeline({ entries }: { entries: ProposalTimelineEntry[] }) {
+  const phaseLabels: Record<string, string> = {
+    creation: "Creation",
+    discussion: "Discussion",
+    voting: "Voting",
+    finalization: "Finalization",
+    execution: "Execution",
+    implementation: "Implementation"
+  };
+  const typeIcons: Record<string, string> = {
+    ProposalCreated: "📝",
+    ProposalDiscussionStarted: "💬",
+    ProposalVotingStarted: "🗳",
+    VoteCast: "✅",
+    ProposalFinalized: "⚖",
+    ProposalExecuted: "🔧",
+    IssueLinked: "🔗",
+    PullRequestMerged: "🔀",
+    ExecutionQueued: "⏳",
+    ExecutionCompleted: "✅",
+    ExecutionCanceled: "❌"
+  };
+  return (
+    <div className="timeline-list">
+      {entries.map((entry, idx) => (
+        <div className={`timeline-entry phase-${entry.phase}`} key={entry.id}>
+          <div className="timeline-connector">
+            {idx < entries.length - 1 && <span className="timeline-line" />}
+          </div>
+          <div className="timeline-dot">{typeIcons[entry.type] || "•"}</div>
+          <div className="timeline-content">
+            <div className="timeline-header">
+              <strong>{entry.type.replace(/([A-Z])/g, " $1").trim()}</strong>
+              <span className="timeline-phase">{phaseLabels[entry.phase] || entry.phase}</span>
+              {entry.blockNumber && <small className="timeline-block">Block #{entry.blockNumber}</small>}
+            </div>
+            <div className="timeline-detail">{formatTimelineDetail(entry)}</div>
+          </div>
+        </div>
+      ))}
+      {entries.length === 0 && <p className="empty">No events recorded for this proposal.</p>}
+    </div>
+  );
+}
+
+function formatTimelineDetail(entry: ProposalTimelineEntry): React.ReactNode {
+  const p = entry.payload as Record<string, string | number | boolean>;
+  switch (entry.type) {
+    case "ProposalCreated":
+      return <span>by {short(String(p.proposer || ""))} · type: {String(p.pType || "General")}</span>;
+    case "VoteCast":
+      return <span>Citizen #{p.citizenId} ({short(String(p.voter || ""))}) voted {p.support ? "YES" : "NO"}</span>;
+    case "ProposalFinalized":
+      return <span>Status: {String(p.status)} · {p.yesVotes} yes / {p.noVotes} no</span>;
+    case "ProposalExecuted":
+      return <span>Execution hash: {short(String(p.executionHash || ""))}</span>;
+    case "IssueLinked":
+      return <a href={String(p.issueUrl || "#")} target="_blank" rel="noreferrer">Issue #{p.issueNumber}</a>;
+    case "PullRequestMerged":
+      return <a href={String(p.url || "#")} target="_blank" rel="noreferrer">PR #{p.prNumber} → {short(String(p.mergeCommit || ""))}</a>;
+    case "ExecutionQueued":
+      return <span>EX-{String(p.executionId || "").padStart(4, "0")} → {short(String(p.target || ""))} · executable after {p.earliestExecuteAt ? formatUnix(Number(p.earliestExecuteAt)) : "N/A"}</span>;
+    case "ExecutionCompleted":
+      return <span>EX-{String(p.executionId || "").padStart(4, "0")} completed · {short(String(p.result || ""))}</span>;
+    case "ExecutionCanceled":
+      return <span>EX-{String(p.executionId || "").padStart(4, "0")} canceled</span>;
+    case "ProposalDiscussionStarted":
+    case "ProposalVotingStarted":
+      return <span>Phase opened</span>;
+    default:
+      return <span>{JSON.stringify(p)}</span>;
+  }
+}
+
+function ProposalChecklist({ items }: { items: ProposalChecklistItem[] }) {
+  const completedCount = items.filter((item) => item.completed).length;
+  const allDone = completedCount === items.length && items.length > 0;
+  return (
+    <div className={`checklist ${allDone ? "all-done" : ""}`}>
+      {items.map((item) => (
+        <div className={`checklist-item ${item.completed ? "done" : "pending"}`} key={item.id}>
+          <span className="checklist-icon">{item.completed ? "✅" : "⬜"}</span>
+          <div className="checklist-content">
+            <strong>{item.label}</strong>
+            {item.detail && <small>{item.detail}</small>}
+            {item.link && <a href={item.link} target="_blank" rel="noreferrer" className="checklist-link">View →</a>}
+          </div>
+        </div>
+      ))}
+      {items.length === 0 && <p className="empty">No checklist items yet.</p>}
+    </div>
+  );
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
