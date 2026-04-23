@@ -166,6 +166,22 @@ function App() {
     setPresence(presenceRes);
   }
 
+  async function reportPresence(account = wallet, currentCitizenId = citizenId) {
+    if (!account) return;
+    await fetch(`${apiBase}/api/presence/heartbeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet: account,
+        citizenId: Number(currentCitizenId || 0),
+        role: "citizen",
+        label: currentCitizenId !== "0" ? `Citizen #${currentCitizenId}` : "Connected wallet"
+      })
+    }).catch(() => null);
+    const nextPresence = await fetch(`${apiBase}/api/presence/online`).then((r) => r.json()).catch(() => null);
+    if (nextPresence) setPresence(nextPresence);
+  }
+
   async function connectWallet() {
     const ethereum = (window as unknown as { ethereum?: Eip1193Provider }).ethereum;
     if (!ethereum) {
@@ -668,7 +684,6 @@ function timeAgo(timestamp: number): string {
 function formatUnix(value: number) {
   if (!value) return "No time";
   return new Date(value * 1000).toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
 }
 
 function assertAddress(address: string, name: string) {
