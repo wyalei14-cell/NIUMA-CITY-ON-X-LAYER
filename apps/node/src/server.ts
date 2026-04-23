@@ -24,6 +24,15 @@ app.get("/api/citizens", (_req, res) => {
   res.json(Object.values(currentWorld().state.citizens));
 });
 
+app.get("/api/citizens/:wallet/profile", (req, res) => {
+  const profile = citizenProfile(req.params.wallet);
+  if (!profile) {
+    res.status(404).json({ error: "citizen not found" });
+    return;
+  }
+  res.json(profile);
+});
+
 app.get("/api/citizens/:wallet", (req, res) => {
   res.json(currentWorld().state.citizens[req.params.wallet.toLowerCase()] || null);
 });
@@ -506,6 +515,82 @@ function onlineCitizenSnapshot() {
     ttlSeconds: onlineCitizenTtlSeconds,
     citizens
   };
+}
+
+function citizenProfile(wallet: string) {
+  const normalizedWallet = wallet.toLowerCase();
+  const world = currentWorld();
+  const citizen = world.state.citizens[normalizedWallet];
+  if (!citizen) return null;
+
+  const proposals = Object.values(world.state.proposals);
+  const companies = Object.values(world.state.companies);
+  const credentials = Object.values(world.state.academy.credentials);
+  const online = onlineCitizenSnapshot().citizens.find((entry) => entry.wallet.toLowerCase() === normalizedWallet) || null;
+  const votes = world.state.archive
+    .filter(isVoteCastEvent)
+    .filter((event) => event.payload.voter.toLowerCase() === normalizedWallet)
+    .map((event) => ({
+      proposalId: event.payload.proposalId,
+      citizenId: event.payload.citizenId,
+      support: event.payload.support,
+      blockNumber: event.blockNumber
+    }));
+
+  const createdProposals = proposals
+    .filter((proposal) => proposal.proposer.toLowerCase() === normalizedWallet)
+    .map((proposal) => ({
+      proposalId: proposal.proposalId,
+      title: proposal.title,
+      status: proposal.status,
+      issueNumber: proposal.issueNumber,
+      issueUrl: proposal.issueUrl,
+      linkedPRs: proposal.linkedPRs
+    }));
+
+  const companyMemberships = companies
+    .filter((company) => company.members.some((member) => member.toLowerCase() === normalizedWallet))
+    .map((company) => ({
+      companyId: company.companyId,
+      name: company.name,
+      owner: company.owner,
+      role: company.owner.toLowerCase() === normalizedWallet ? "owner" : "member",
+      memberCount: company.members.length
+    }));
+
+  const issuedCredentials = credentials
+    .filter((credential) => credential.citizen.toLowerCase() === normalizedWallet)
+    .map((credential) => ({
+      credentialId: credential.credentialId,
+      courseId: credential.courseId,
+      evidenceHash: credential.evidenceHash,
+      issuedAt: credential.issuedAt
+    }));
+
+  return {
+    citizen,
+    online,
+    reputation: world.state.reputation[normalizedWallet] || {
+      citizen: citizen.wallet,
+      totalPoints: 0,
+      governancePoints: 0,
+      academyPoints: 0,
+      companyPoints: 0
+    },
+    companyMemberships,
+    credentials: issuedCredentials,
+    proposals: createdProposals,
+    votes,
+    proofLinks: {
+      githubIssues: createdProposals.filter((proposal) => proposal.issueUrl).map((proposal) => proposal.issueUrl),
+      githubPullRequests: createdProposals.flatMap((proposal) => proposal.linkedPRs.map((pullRequest) => pullRequest.url)),
+      credentials: issuedCredentials.map((credential) => credential.evidenceHash)
+    }
+  };
+}
+
+function isVoteCastEvent(event: WorldEvent): event is Extract<WorldEvent, { type: "VoteCast" }> {
+  return event.type === "VoteCast";
 }
 
 async function githubHealth(repository: ReturnType<typeof repositoryLink>) {

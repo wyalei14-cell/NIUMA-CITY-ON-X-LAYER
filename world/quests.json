@@ -142,7 +142,7 @@
     "issueUrl": "https://github.com/wyalei14-cell/NIUMA-CITY-ON-X-LAYER/issues/23",
     "title": "Build citizen profile API and page",
     "type": "web",
-    "status": "open",
+    "status": "completed",
     "proposalId": 4,
     "summary": "Create a citizen profile surface showing wallet, citizen id, online state, reputation, credentials, company membership, proposals, votes, and quest proof links.",
     "acceptance": [

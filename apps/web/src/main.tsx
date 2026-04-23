@@ -83,6 +83,16 @@ type Bootstrap = {
 type Citizen = { citizenId: number; wallet: string; metadataURI: string };
 type OnlineCitizen = { wallet: string; citizenId: number; label: string; role: string; registered: boolean; lastSeenAt: number; expiresAt: number };
 type OnlinePresence = { count: number; ttlSeconds: number; citizens: OnlineCitizen[] };
+type CitizenProfile = {
+  citizen: Citizen;
+  online: OnlineCitizen | null;
+  reputation: { totalPoints: number; governancePoints: number; academyPoints: number; companyPoints: number };
+  companyMemberships: Array<{ companyId: number; name: string; owner: string; role: string; memberCount: number }>;
+  credentials: Array<{ credentialId: number; courseId: number; evidenceHash: string; issuedAt: number }>;
+  proposals: Array<{ proposalId: number; title: string; status: string; issueNumber?: number; issueUrl?: string; linkedPRs: Array<{ prNumber: number; mergeCommit: string; url: string }> }>;
+  votes: Array<{ proposalId: number; citizenId: number; support: boolean; blockNumber: number }>;
+  proofLinks: { githubIssues: string[]; githubPullRequests: string[]; credentials: string[] };
+};
 
 const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
@@ -110,6 +120,7 @@ function App() {
   const [academyCourses, setAcademyCourses] = useState<Array<{courseId:number;proposer:string;title:string;contentHash:string;difficulty:number;status:string;completionCount:number}>>([]);
   const [academyCredentials, setAcademyCredentials] = useState<Array<{credentialId:number;citizen:string;courseId:number;evidenceHash:string;issuedAt:number}>>([]);
   const [presence, setPresence] = useState<OnlinePresence>({ count: 0, ttlSeconds: 120, citizens: [] });
+  const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(null);
   const [notice, setNotice] = useState("Live node synced from X Layer Testnet events.");
   const contractsReady = Object.values(addresses).some(Boolean);
 
@@ -122,6 +133,7 @@ function App() {
   useEffect(() => {
     if (!wallet) return;
     reportPresence(wallet, citizenId);
+    fetchCitizenProfile(wallet);
     const timer = window.setInterval(() => reportPresence(wallet, citizenId), 45000);
     return () => window.clearInterval(timer);
   }, [wallet, citizenId]);
@@ -157,6 +169,12 @@ function App() {
     setAcademyCourses(academyRes.courses || []);
     setAcademyCredentials(academyRes.credentials || []);
     setPresence(presenceRes);
+    if (wallet) await fetchCitizenProfile(wallet);
+  }
+
+  async function fetchCitizenProfile(account: string) {
+    const profile = await fetch(`${apiBase}/api/citizens/${account}/profile`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setCitizenProfile(profile);
   }
 
   async function reportPresence(account = wallet, currentCitizenId = citizenId) {
@@ -408,6 +426,7 @@ function App() {
               ]}
             />
             <ActionPanel icon={<Vote />} title="Mayor" meta={mayor ? `${short(mayor.wallet)} · ${timeLeft}` : "No active mayor"} actions={[["Refresh", refresh]]} />
+            <CitizenProfileCard profile={citizenProfile} wallet={wallet} />
           </section>
         )}
 
@@ -569,6 +588,57 @@ function ExecutionQueue({ executions }: { executions: GovernanceExecution[] }) {
           <span>{formatUnix(execution.earliestExecuteAt)}</span>
           <small title={execution.metadataURI}>{shortHash(execution.metadataURI)}</small>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function CitizenProfileCard({ profile, wallet }: { profile: CitizenProfile | null; wallet: string }) {
+  const proofs = [
+    ...(profile?.proofLinks.githubIssues || []),
+    ...(profile?.proofLinks.githubPullRequests || []),
+    ...(profile?.proofLinks.credentials || [])
+  ].slice(0, 3);
+  return (
+    <article className="citizen-card">
+      <div className="citizen-card-head">
+        <span>{profile?.citizen.citizenId ? `#${profile.citizen.citizenId}` : "ID"}</span>
+        <div>
+          <h2>Digital citizen card</h2>
+          <p>{profile ? short(profile.citizen.wallet) : wallet ? "Profile not indexed yet" : "Connect a wallet"}</p>
+        </div>
+        <strong className={profile?.online ? "online" : ""}>{profile?.online ? "Online" : "Offline"}</strong>
+      </div>
+      <div className="profile-stats">
+        <ProfileStat label="Reputation" value={String(profile?.reputation.totalPoints ?? 0)} />
+        <ProfileStat label="Votes" value={String(profile?.votes.length ?? 0)} />
+        <ProfileStat label="Proposals" value={String(profile?.proposals.length ?? 0)} />
+        <ProfileStat label="Credentials" value={String(profile?.credentials.length ?? 0)} />
+      </div>
+      <div className="profile-grid">
+        <ProfileList title="Companies" items={(profile?.companyMemberships || []).map((company) => `${company.name} · ${company.role}`)} empty="No company yet" />
+        <ProfileList title="Recent votes" items={(profile?.votes || []).slice(-3).map((vote) => `P-${vote.proposalId} · ${vote.support ? "yes" : "no"}`)} empty="No votes yet" />
+        <ProfileList title="Proof links" items={proofs.map(shortHash)} empty="No public proof yet" />
+      </div>
+    </article>
+  );
+}
+
+function ProfileStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ProfileList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <div className="profile-list">
+      <h3>{title}</h3>
+      {(items.length ? items : [empty]).map((item, index) => (
+        <span key={`${title}-${index}`}>{item}</span>
       ))}
     </div>
   );
