@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/citizen-profile-v1.schema.json",
+  "version": 1,
+  "generatedAt": "2026-04-23T04:45:00Z",
+  "profiles": {
+    "1": {
+      "citizenId": 1,
+      "wallet": "0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a",
+      "joinedAt": 1776907807,
+      "achievements": [
+        "first-citizen",
+        "academy-graduate",
+        "quest-completer",
+        "proposer"
+      ],
+      "reputation": 195,
+      "contributions": {
+        "proposals": 7,
+        "quests": 9,
+        "prsMerged": 3
+      },
+      "title": "Elder",
+      "lastActive": 1776919544,
+      "metadata": {
+        "displayName": "City Founder",
+        "bio": "Founder of NIUMA CITY. Built the Academy District and established city identity systems.",
+        "company": null,
+        "updatedAt": "2026-04-23T04:45:00Z"
+      }
+    }
+  }
+}

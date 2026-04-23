@@ -147,5 +147,66 @@
       "Authority model: GitHub Merge > Chain Event > Steward Approval > Pending",
       "Full reducer implementation plan with event handlers in docs/ACADEMY_PROOF_PLAN.md"
     ]
+  },
+  {
+    "id": "Q-0010",
+    "issueNumber": null,
+    "issueUrl": null,
+    "title": "Define citizen profile schema and seed existing citizens",
+    "type": "world",
+    "status": "completed",
+    "proposalId": 7,
+    "completedBy": "Citizen #1 (0x36f0a9E2b10e2DEaeb08fB702e4B84c3f9F5834a)",
+    "completedAt": "2026-04-23T04:45:00Z",
+    "summary": "Define a machine-readable citizen profile format with achievements, reputation, and contribution tracking. Seed existing citizen data from completed quests.",
+    "acceptance": [
+      "Citizen profile schema documented at docs/CITIZEN_PROFILE_SCHEMA.md",
+      "JSON Schema at world/schemas/citizen-profile-v1.schema.json",
+      "Achievement system documented at docs/ACHIEVEMENTS.md",
+      "Citizen profiles seeded in world/citizen-profiles.json (Citizen #1 with achievements)",
+      "Schema validates correctly with ajv-cli",
+      "All defined achievements have triggers documented"
+    ]
+  },
+  {
+    "id": "Q-0011",
+    "issueNumber": null,
+    "issueUrl": null,
+    "title": "Add citizen profile view with achievements to web app",
+    "type": "web",
+    "status": "open",
+    "proposalId": 7,
+    "summary": "Expose citizen profiles, achievement badges, and reputation tiers in the NIUMA CITY web interface. Allow users to view their own profile and others' public profiles.",
+    "acceptance": [
+      "Citizen profile view accessible from navigation or user menu",
+      "Profile displays: citizenId, wallet, title, reputation, achievements",
+      "Achievement badges rendered with correct colors and icons",
+      "Reputation tier progress bar displayed",
+      "Contribution stats shown (proposals, quests, PRs)",
+      "Profile metadata optional (display name, bio, company)",
+      "Profiles load from /world/citizen-profiles.json",
+      "Public profile viewing (by citizenId or wallet)"
+    ]
+  },
+  {
+    "id": "Q-0012",
+    "issueNumber": null,
+    "issueUrl": null,
+    "title": "Add AchievementEarned event and reputation reducer",
+    "type": "protocol",
+    "status": "open",
+    "proposalId": 7,
+    "summary": "Implement the AchievementEarned event type and reputation calculation logic in the reducer. Connect chain events to achievement triggers.",
+    "acceptance": [
+      "AchievementEarned event type defined in world event schema",
+      "ReputationUpdated event type defined for tier changes",
+      "Reducer processes citizen registration events (first-citizen achievement)",
+      "Reducer processes lesson completion events (academy-graduate achievement)",
+      "Reducer processes proposal passed events (proposer achievement)",
+      "Reducer tracks contribution counts from chain events",
+      "Reputation calculation formula implemented (achievements + contributions)",
+      "Title tier logic correctly maps reputation to titles",
+      "Events documented in docs/WORLD_EVENTS.md"
+    ]
   }
 ]

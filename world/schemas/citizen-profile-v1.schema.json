@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://niuma.city/schemas/citizen-profile-v1.json",
+  "title": "NIUMA CITY Citizen Profile Schema v1",
+  "description": "Machine-readable citizen profile for identity, achievements, and reputation tracking",
+  "type": "object",
+  "required": ["citizenId", "wallet", "joinedAt", "achievements", "reputation", "contributions", "title"],
+  "properties": {
+    "citizenId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Unique citizen identifier from CitizenRegistry"
+    },
+    "wallet": {
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$",
+      "description": "Citizen's Ethereum wallet address"
+    },
+    "joinedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix timestamp when citizen registered (from CitizenRegistration event)"
+    },
+    "achievements": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "first-citizen",
+          "academy-graduate",
+          "quest-completer",
+          "proposer",
+          "steward",
+          "guild-founder",
+          "mentor",
+          "night-owl"
+        ]
+      },
+      "description": "List of achievement IDs earned by the citizen"
+    },
+    "reputation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reputation score (sum of achievement values and contributions)"
+    },
+    "contributions": {
+      "type": "object",
+      "required": ["proposals", "quests", "prsMerged"],
+      "properties": {
+        "proposals": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of proposals created"
+        },
+        "quests": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of quests completed"
+        },
+        "prsMerged": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of pull requests merged"
+        }
+      },
+      "description": "Track record of contributions to the city"
+    },
+    "title": {
+      "type": "string",
+      "enum": [
+        "Newcomer",
+        "Builder",
+        "Architect",
+        "Elder",
+        "Legend",
+        "City Founder"
+      ],
+      "description": "Citizen title based on reputation tier"
+    },
+    "lastActive": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix timestamp of last activity (proposal, quest, PR, etc.)"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Optional display name (not wallet address)"
+        },
+        "bio": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Optional short bio"
+        },
+        "company": {
+          "type": ["string", "null"],
+          "description": "Company/guild affiliation (if any)"
+        },
+        "updatedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$",
+          "description": "Last profile update timestamp (ISO 8601)"
+        }
+      }
+    }
+  }
+}
